@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-canvas: #F9FAFB;
+  --color-surface: #FFFFFF;
+  --color-surface-subtle: #F3F4F6;
+  --color-border: #EAECF0;
+  --color-border-strong: #D0D5DD;
+  
+  --color-text-primary: #0B0F19;
+  --color-text-secondary: #475467;
+  --color-text-muted: #98A2B3;
+  
+  --brand-ink: #0B0F19;
+  --solar-accent: #F59E0B;
+  --solar-accent-hover: #D97706;
+  
+  --sunday-accent: #EA580C;
+  --sunday-bg: #FFEDD5;
+  
+  /* Status Semantics */
+  --status-graduate-bg: #ECFDF5;
+  --status-graduate-text: #065F46;
+  
+  --status-notyet-bg: #FFF1F2;
+  --status-notyet-text: #9F1239;
+  
+  --status-pending-bg: #FFFBEB;
+  --status-pending-text: #92400E;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-text-primary);
+  font-family: var(--font-jakarta), -apple-system, BlinkMacSystemFont, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Enforce Tabular Numbers on Numeric and Score Outputs */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Smooth Touch Targets */
+button, input, select, textarea {
+  touch-action: manipulation;
+}
