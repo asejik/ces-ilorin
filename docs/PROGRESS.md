@@ -49,6 +49,13 @@
   4. Active Session PIN re-verification in `submitAssessmentAction` preventing out-of-band submissions.
   5. HTML entity sanitization in transactional welcome email templates.
 - **P05: Architecture & Product Quality Review**: Documented in `docs/audits/P05_2026-09-19.md`. **Overall Grade: A (Exemplary Production & Product Quality)**. 100% requirements traceability across all user stories (US-01 to US-06), zero `any` types, 62/62 unit tests passing, client acceptance readiness certified.
+- **P08: SEO & Discoverability Audit**: Documented in `docs/audits/P08_2026-09-19.md`. 6 fixes applied:
+  1. Branded Open Graph & Twitter Card social preview card (`public/og-image.png`, 1200x630, 33.6 kB) optimized for WhatsApp, X, Facebook, and LinkedIn.
+  2. Native Next.js App Router dynamic generators for `/robots.txt` (`src/app/robots.ts`) and `/sitemap.xml` (`src/app/sitemap.ts`).
+  3. Schema.org JSON-LD structured data (`EducationalOrganization` and `Course`) embedded directly in server-rendered root layout.
+  4. Server-rendered route layouts across public routes (`/register`, `/assess`, `/attendance`) providing distinct canonical URLs and title templates.
+  5. Search engine indexing exclusion (`robots: { index: false, follow: false }`) applied to all administrative (`/admin/*`), authentication (`/login`), student success, and certificate verification routes.
+  6. Machine-readable AI directory (`public/llms.txt`) summarizing institution profile, cohort tracks, 8-course curriculum, and graduation criteria for LLM search crawlers.
 
 ---
 

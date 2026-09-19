@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { 
   CheckCircle2, 
@@ -8,6 +9,14 @@ import {
   Award,
   Home
 } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Registration Successful',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 interface SuccessPageProps {
   searchParams: {
