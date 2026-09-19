@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS ces_attendance_records (
 
 CREATE INDEX IF NOT EXISTS idx_ces_attendance_student ON ces_attendance_records(student_id);
 CREATE INDEX IF NOT EXISTS idx_ces_attendance_semester ON ces_attendance_records(semester_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ces_attendance_student_course_semester ON ces_attendance_records(student_id, course_name, semester_id);
 
 -- 9. CERTIFICATES
 CREATE TABLE IF NOT EXISTS ces_certificates (

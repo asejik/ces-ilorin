@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#0B0F19" />
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="none" stroke="#D97706" stroke-width="1.5" stroke-opacity="0.6"/>
+  <!-- Graduation cap base / mortarboard diamond -->
+  <path d="M32 16L54 27L32 38L10 27Z" fill="#F59E0B" />
+  <!-- Under-cap skullcap / scroll arc -->
+  <path d="M19 32.5V41C19 44 24.8 48 32 48C39.2 48 45 44 45 41V32.5L32 39.5L19 32.5Z" fill="#D97706" />
+  <!-- Tassel -->
+  <path d="M47 28.5V42C47 43.5 45.5 44.5 44 44" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" fill="none" />
+  <circle cx="44" cy="44.5" r="2" fill="#FBBF24" />
+  <!-- Luminary star at the peak -->
+  <circle cx="32" cy="27" r="2.5" fill="#FFFBEB" />
+</svg>

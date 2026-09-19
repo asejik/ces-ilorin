@@ -17,6 +17,11 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: 'CES Portal | Citizens Elementary School',
   description: 'Academic Management and Discipleship Training Portal for Citizens of Light Church, Ilorin',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/favicon.ico',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

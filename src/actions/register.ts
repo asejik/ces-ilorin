@@ -41,6 +41,7 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
       emergency_contact: (formData.get('emergency_contact') as string) || null,
       emergency_contact_phone: (formData.get('emergency_contact_phone') as string) || null,
       notes: (formData.get('notes') as string) || null,
+      ndpa_consent: (formData.get('ndpa_consent') as string) || null,
     };
 
     // 1. Zod Validation

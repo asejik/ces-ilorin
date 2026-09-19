@@ -40,6 +40,7 @@ export const studentRegistrationSchema = z.object({
   emergency_contact: z.string().optional().nullable(),
   emergency_contact_phone: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  ndpa_consent: z.string().optional().nullable(),
 });
 
 export type StudentRegistrationInput = z.infer<typeof studentRegistrationSchema>;
