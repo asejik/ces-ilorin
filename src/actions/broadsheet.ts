@@ -486,17 +486,39 @@ export async function batchIssueCertificatesAction(
       (r) => r.graduationStatus === '✅ GRADUATE' && !r.certificateId
     );
 
-    let newlyIssued = 0;
-    for (const student of eligibleGraduates) {
-      const issueRes = await issueCertificateAction(student.studentId);
-      if (issueRes.success) {
-        newlyIssued++;
-      }
+    if (eligibleGraduates.length === 0) {
+      return {
+        success: true,
+        issuedCount: 0,
+        totalGraduates: broadsheetRes.kpis?.graduatesCount ?? 0,
+      };
+    }
+
+    // Efficiency: Bulk insert all certificates in a single atomic database operation
+    // Eliminates 7 queries * N students down to 1 query total
+    const nowIso = new Date().toISOString();
+    const certsToInsert = eligibleGraduates.map((student) => ({
+      student_id: student.studentId,
+      certificate_no: generateCertificateNumber(student.matricNo),
+      honour_class: student.honourClass,
+      cumulative_total: student.cumulativeTotal,
+      issued_at: nowIso,
+    }));
+
+    const supabase = createAdminClient();
+    const { data: inserted, error: insertErr } = await supabase
+      .from('ces_certificates')
+      .upsert(certsToInsert, { onConflict: 'student_id' })
+      .select('id');
+
+    if (insertErr) {
+      console.error('[Batch Issue Certificates DB Error]:', insertErr);
+      return { success: false, error: `Database error while batch issuing certificates: ${insertErr.message}` };
     }
 
     return {
       success: true,
-      issuedCount: newlyIssued,
+      issuedCount: inserted?.length ?? certsToInsert.length,
       totalGraduates: broadsheetRes.kpis?.graduatesCount ?? 0,
     };
   } catch (err: unknown) {

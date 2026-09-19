@@ -136,6 +136,7 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
           .upload(filePath, buffer, {
             contentType: passportFile.type,
             upsert: true,
+            cacheControl: '31536000',
           });
 
         if (!uploadErr) {

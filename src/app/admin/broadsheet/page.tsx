@@ -486,6 +486,8 @@ export default function BroadsheetPage() {
                               <img
                                 src={row.passportUrl}
                                 alt={row.fullName}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-8 h-8 rounded-lg object-cover border border-ink-200 shrink-0"
                               />
                             ) : (
