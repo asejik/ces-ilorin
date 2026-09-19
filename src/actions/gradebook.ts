@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { requireStaffUser } from '@/lib/auth/guard';
 import {
   scoreOverrideSchema,
   attendanceOverrideSchema,
@@ -79,6 +80,7 @@ export async function getCohortGradebookAction(
   cohortType: string = 'Regular'
 ): Promise<CohortGradebookResponse> {
   try {
+    await requireStaffUser();
     const supabase = createAdminClient();
 
     // 1. Resolve active semester
@@ -322,6 +324,7 @@ export async function overrideStudentScoreAction(
     }
 
     const { studentId, quizId, newScore, reason } = parseResult.data;
+    const staff = await requireStaffUser();
     const supabase = createAdminClient();
 
     // Check if score already exists
@@ -333,12 +336,13 @@ export async function overrideStudentScoreAction(
       .maybeSingle();
 
     if (existing) {
-      // Update with override flag and reason
+      // Update with override flag, staff ID, and reason
       const { error: updErr } = await supabase
         .from('ces_student_assessments')
         .update({
           score: newScore,
           is_manual_override: true,
+          overridden_by: staff.id,
           override_reason: reason,
           submitted_at: new Date().toISOString(),
         })
@@ -378,6 +382,7 @@ export async function overrideStudentAttendanceAction(
   input: AttendanceOverrideInput
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireStaffUser();
     const parseResult = attendanceOverrideSchema.safeParse(input);
     if (!parseResult.success) {
       const firstErr = parseResult.error.errors[0]?.message || 'Invalid attendance parameters';

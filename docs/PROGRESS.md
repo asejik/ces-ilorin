@@ -36,12 +36,18 @@
 
 ---
 
-## Audits & Production Quality (P02 & P03)
+## Audits & Production Quality (P02, P03 & P04)
 - **P02: Egress & Efficiency Audit**: Documented in `docs/audits/P02_2026-09-19.md`. 7 optimizations applied (cache headers, image optimization, payload reduction, gzip compression).
 - **P03: Production Readiness Audit**: Documented in `docs/audits/P03_2026-09-19.md`. 3 fixes applied:
   1. Attendance composite unique index (`idx_ces_attendance_student_course_semester`) on `(student_id, course_name, semester_id)` for atomic idempotency.
   2. Data privacy & consent notice (Nigeria Data Protection Act - NDPA 2023) on student registration form and validation schema.
   3. Official CES favicon (`favicon.ico`) and vector icon (`icon.svg`) eliminating 404s.
+- **P04: Security Audit**: Documented in `docs/audits/P04_2026-09-19.md`. 5 defensive patches applied:
+  1. Administrative route guard in middleware (`/admin/*` $\rightarrow$ `/login?redirect=...`).
+  2. Server-side staff authorization guard (`requireStaffUser()`) across all administrative Server Actions (`gradebook.ts`, `broadsheet.ts`, `assessment.ts`, `attendance.ts`).
+  3. Cryptographic magic bytes file header verification (`validateImageBuffer`) and strict extension mapping on passport photo uploads.
+  4. Active Session PIN re-verification in `submitAssessmentAction` preventing out-of-band submissions.
+  5. HTML entity sanitization in transactional welcome email templates.
 
 ---
 

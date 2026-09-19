@@ -65,3 +65,53 @@ export function validatePassportFile(file: File | null): { valid: boolean; error
 
   return { valid: true };
 }
+
+/**
+ * Server-Side Image Buffer Validation:
+ * Validates declared MIME type, verifies magic header bytes, and provides a safe extension.
+ */
+export function validateImageBuffer(
+  buffer: Buffer,
+  declaredType: string
+): { valid: boolean; ext?: string; error?: string } {
+  const MIME_MAP: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+  };
+
+  const ext = MIME_MAP[declaredType];
+  if (!ext) {
+    return { valid: false, error: 'Unsupported file type. Only JPG, PNG, and WebP are permitted.' };
+  }
+
+  if (buffer.length < 4) {
+    return { valid: false, error: 'Corrupted image file.' };
+  }
+
+  // Check magic bytes signatures
+  if (declaredType === 'image/jpeg') {
+    // JPEG signature: FF D8 FF
+    if (buffer[0] !== 0xff || buffer[1] !== 0xd8 || buffer[2] !== 0xff) {
+      return { valid: false, error: 'Invalid JPEG file content: signature mismatch.' };
+    }
+  } else if (declaredType === 'image/png') {
+    // PNG signature: 89 50 4E 47
+    if (buffer[0] !== 0x89 || buffer[1] !== 0x50 || buffer[2] !== 0x4e || buffer[3] !== 0x47) {
+      return { valid: false, error: 'Invalid PNG file content: signature mismatch.' };
+    }
+  } else if (declaredType === 'image/webp') {
+    // WebP signature: RIFF (52 49 46 46) ... WEBP (57 45 42 50)
+    if (buffer.length < 12) {
+      return { valid: false, error: 'Corrupted WebP file content.' };
+    }
+    const isRiff = buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46;
+    const isWebp = buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+    if (!isRiff || !isWebp) {
+      return { valid: false, error: 'Invalid WebP file content: signature mismatch.' };
+    }
+  }
+
+  return { valid: true, ext };
+}
+

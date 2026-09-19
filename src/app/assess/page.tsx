@@ -199,6 +199,7 @@ export default function AssessmentPortalPage() {
       const res = await submitAssessmentAction({
         matricNo: candidate.matricNo,
         quizId: activeQuiz.id,
+        sessionPin,
         answers,
       });
 

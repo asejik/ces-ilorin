@@ -31,7 +31,9 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/dashboard');
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const redirectTarget = params?.get('redirect') || '/admin/gradebook';
+      router.push(redirectTarget);
       router.refresh();
     } catch {
       setError('An unexpected error occurred. Please check your network connection.');
