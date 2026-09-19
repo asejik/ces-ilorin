@@ -575,6 +575,22 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* SECTION 6: DATA PRIVACY & CONSENT (NDPA 2023) */}
+          <div className="bg-surface p-5 sm:p-6 rounded-2xl border border-ink-200 shadow-sm">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                name="ndpa_consent"
+                required
+                defaultChecked
+                className="w-4 h-4 mt-0.5 rounded border-ink-300 text-solar-600 focus:ring-solar-500 shrink-0"
+              />
+              <span className="text-xs text-ink-700 leading-relaxed">
+                <strong className="text-ink-950 font-semibold">Data Privacy & Consent (NDPA 2023):</strong> I consent to Citizens of Light Church / Citizens Elementary School collecting, storing, and processing my personal, contact, and academic information strictly for cohort enrollment, discipleship progress, and graduation certification in accordance with the Nigeria Data Protection Act (NDPA 2023).
+              </span>
+            </label>
+          </div>
+
           {/* SUBMIT BUTTON */}
           <div className="pt-2">
             <button

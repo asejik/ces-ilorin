@@ -36,8 +36,17 @@
 
 ---
 
+## Audits & Production Quality (P02 & P03)
+- **P02: Egress & Efficiency Audit**: Documented in `docs/audits/P02_2026-09-19.md`. 7 optimizations applied (cache headers, image optimization, payload reduction, gzip compression).
+- **P03: Production Readiness Audit**: Documented in `docs/audits/P03_2026-09-19.md`. 3 fixes applied:
+  1. Attendance composite unique index (`idx_ces_attendance_student_course_semester`) on `(student_id, course_name, semester_id)` for atomic idempotency.
+  2. Data privacy & consent notice (Nigeria Data Protection Act - NDPA 2023) on student registration form and validation schema.
+  3. Official CES favicon (`favicon.ico`) and vector icon (`icon.svg`) eliminating 404s.
+
+---
+
 ## Known Issues & Follow-ups
 - Credentials for live Supabase project configured in `.env.local` with isolated `ces_*` table namespace.
 - Storage bucket `ces-assets` created and active for photo and document uploads.
-- **Fixed (2026-09-19)**: Form submission database error (PostgreSQL error `42501` and FK `23503`) resolved by granting schema/table privileges to `anon`, `authenticated`, and `service_role`, seeding default active cohorts (`Regular Cohort — 2026`, `Sunday Cohort — 2026`), and introducing `createAdminClient()` in `src/lib/supabase/admin.ts` for atomic server-side registration operations. All tests (22/22) passing and Next.js build clean.
+- **Fixed (2026-09-19)**: Form submission database error (PostgreSQL error `42501` and FK `23503`) resolved by granting schema/table privileges to `anon`, `authenticated`, and `service_role`, seeding default active cohorts (`Regular Cohort — 2026`, `Sunday Cohort — 2026`), and introducing `createAdminClient()` in `src/lib/supabase/admin.ts` for atomic server-side registration operations. All tests (62/62) passing and Next.js build clean.
 
