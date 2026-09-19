@@ -182,6 +182,22 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
       passport_url: passportUrl,
     };
 
+    // Abuse Deterrence: prevent duplicate rapid submissions for the same email within 60s
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
+    const { data: recentRegistration } = await supabase
+      .from('ces_students')
+      .select('matric_no')
+      .eq('email_address', validatedData.email_address.trim().toLowerCase())
+      .gte('created_at', oneMinuteAgo)
+      .maybeSingle();
+
+    if (recentRegistration) {
+      return {
+        success: false,
+        error: 'A registration for this email address was received recently. Please check your email or wait before retrying.',
+      };
+    }
+
     const { error: insertErr } = await supabase.from('ces_students').insert(studentRecord);
     if (insertErr) {
       console.error('[Registration] Database insert error:', insertErr);
