@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { requireStaffUser } from '@/lib/auth/guard';
 import {
   attendanceCheckinSchema,
   type AttendanceCheckinInput,
@@ -145,6 +146,7 @@ export async function getAttendanceFeedbackAction(
   courseName?: string
 ): Promise<{ success: boolean; stats?: AttendanceSummaryStats; error?: string }> {
   try {
+    await requireStaffUser();
     const supabase = createAdminClient();
 
     let query = supabase

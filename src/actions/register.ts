@@ -1,7 +1,11 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
-import { studentRegistrationSchema, validatePassportFile } from '@/lib/validation/registration';
+import {
+  studentRegistrationSchema,
+  validatePassportFile,
+  validateImageBuffer,
+} from '@/lib/validation/registration';
 import { generateMatricNumber } from '@/lib/academic';
 import { sendWelcomeEmail } from '@/lib/email';
 
@@ -127,10 +131,17 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
     let passportUrl: string | null = null;
     if (passportFile && passportFile.size > 0) {
       try {
-        const fileExt = passportFile.name.split('.').pop() || 'jpg';
-        const filePath = `passports/${matricNo.replace(/\//g, '_')}.${fileExt}`;
         const arrayBuffer = await passportFile.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+
+        // Verify magic bytes signatures and determine canonical extension
+        const bufferValidation = validateImageBuffer(buffer, passportFile.type);
+        if (!bufferValidation.valid || !bufferValidation.ext) {
+          return { success: false, error: bufferValidation.error || 'Invalid image file content.' };
+        }
+
+        const safeExt = bufferValidation.ext;
+        const filePath = `passports/${matricNo.replace(/\//g, '_')}.${safeExt}`;
 
         const { error: uploadErr } = await supabase.storage
           .from('ces-assets')

@@ -54,14 +54,35 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // Efficiency: If no Supabase auth token cookie exists on the request,
-  // skip the expensive outbound network call to Supabase Auth API
+  // Check if Supabase auth cookies exist on the request
   const hasAuthCookie = request.cookies
     .getAll()
     .some((c) => c.name.startsWith('sb-') || c.name.includes('auth-token'));
 
+  let user = null;
   if (hasAuthCookie) {
-    await supabase.auth.getUser();
+    const { data } = await supabase.auth.getUser();
+    user = data?.user || null;
+  }
+
+  const { pathname } = request.nextUrl;
+
+  // ROUTE GUARD: Protect all /admin/* routes from unauthenticated access
+  if (pathname.startsWith('/admin')) {
+    if (!user) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/login';
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // REDIRECT GUARD: Redirect logged-in staff away from /login to admin gradebook
+  if (pathname === '/login' && user) {
+    const targetUrl = request.nextUrl.clone();
+    targetUrl.pathname = '/admin/gradebook';
+    targetUrl.searchParams.delete('redirect');
+    return NextResponse.redirect(targetUrl);
   }
 
   return response;

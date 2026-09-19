@@ -33,6 +33,15 @@ function getEmailTransporter() {
   });
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 /**
  * Dispatches an automated welcome email to admitted students
  */
@@ -40,6 +49,10 @@ export async function sendWelcomeEmail(
   params: SendWelcomeEmailParams
 ): Promise<{ success: boolean; error?: string }> {
   const { to, studentName, matricNo, cohortType, manualUrl } = params;
+
+  const safeName = escapeHtml(studentName);
+  const safeMatric = escapeHtml(matricNo);
+  const safeCohort = escapeHtml(cohortType);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ces.citizensoflightchurch.org';
   const effectiveManualUrl = manualUrl || `${appUrl}/manual.pdf`;
@@ -76,7 +89,7 @@ export async function sendWelcomeEmail(
           <tr>
             <td style="padding: 32px 28px;">
               <h1 style="font-size: 20px; font-weight: 700; color: #0B0F19; margin-top: 0; margin-bottom: 12px;">
-                Congratulations, ${studentName}!
+                Congratulations, ${safeName}!
               </h1>
               <p style="font-size: 15px; line-height: 24px; color: #475467; margin-top: 0; margin-bottom: 24px;">
                 Your registration for the <strong>Citizens Elementary School (CES) Discipleship Training Programme</strong> has been successfully confirmed.
@@ -90,10 +103,10 @@ export async function sendWelcomeEmail(
                       Official Matriculation Number
                     </div>
                     <div style="font-size: 24px; font-weight: 800; color: #0B0F19; letter-spacing: 1px;">
-                      ${matricNo}
+                      ${safeMatric}
                     </div>
                     <div style="font-size: 13px; color: #92400E; margin-top: 6px;">
-                      Assigned Cohort: <strong>${cohortType}</strong>
+                      Assigned Cohort: <strong>${safeCohort}</strong>
                     </div>
                   </td>
                 </tr>
@@ -104,7 +117,7 @@ export async function sendWelcomeEmail(
                 Important Programme Instructions:
               </h2>
               <ul style="font-size: 14px; line-height: 22px; color: #475467; padding-left: 20px; margin-bottom: 28px;">
-                <li style="margin-bottom: 8px;"><strong>Keep your Matric Number safe:</strong> You will use <code>${matricNo}</code> to access all class quizzes and examinations.</li>
+                <li style="margin-bottom: 8px;"><strong>Keep your Matric Number safe:</strong> You will use <code>${safeMatric}</code> to access all class quizzes and examinations.</li>
                 <li style="margin-bottom: 8px;"><strong>Class Attendance:</strong> Attendance in <em>Elementary Principles</em> and <em>Membership & Vision Class</em> is mandatory for graduation clearance.</li>
                 <li style="margin-bottom: 8px;"><strong>Online Quizzes:</strong> At the conclusion of each course, your teacher will provide a Session PIN to take your quiz on the school portal.</li>
               </ul>

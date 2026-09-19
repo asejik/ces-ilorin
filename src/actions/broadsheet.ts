@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { requireStaffUser } from '@/lib/auth/guard';
 import {
   calculateCumulativeScore,
   determineGraduationStatus,
@@ -35,6 +36,7 @@ export async function getBroadsheetAction(
   cohortType: string = 'Regular'
 ): Promise<BroadsheetResponse> {
   try {
+    await requireStaffUser();
     const supabase = createAdminClient();
 
     // 1. Resolve active semester
@@ -304,6 +306,7 @@ export async function issueCertificateAction(
   studentId: string
 ): Promise<{ success: boolean; certificate?: CertificateDetails; error?: string }> {
   try {
+    await requireStaffUser();
     if (!studentId) {
       return { success: false, error: 'Student ID is required' };
     }
@@ -477,6 +480,7 @@ export async function batchIssueCertificatesAction(
   cohortType: string = 'Regular'
 ): Promise<{ success: boolean; issuedCount?: number; totalGraduates?: number; error?: string }> {
   try {
+    await requireStaffUser();
     const broadsheetRes = await getBroadsheetAction(cohortType);
     if (!broadsheetRes.success || !broadsheetRes.rows) {
       return { success: false, error: broadsheetRes.error || 'Failed to inspect broadsheet' };

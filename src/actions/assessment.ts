@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { requireStaffUser } from '@/lib/auth/guard';
 import {
   assessmentAccessSchema,
   assessmentSubmissionSchema,
@@ -339,7 +340,7 @@ export async function submitAssessmentAction(
       return { success: false, error: firstErr };
     }
 
-    const { matricNo, quizId, answers } = parseResult.data;
+    const { matricNo, quizId, answers, sessionPin } = parseResult.data;
     const supabase = createAdminClient();
 
     // 1. Validate student
@@ -357,7 +358,7 @@ export async function submitAssessmentAction(
     // 2. Validate quiz
     const { data: quiz, error: qzErr } = await supabase
       .from('ces_quizzes')
-      .select('id, title, max_score, is_open')
+      .select('id, title, max_score, is_open, session_pin')
       .eq('id', quizId)
       .maybeSingle();
 
@@ -367,6 +368,12 @@ export async function submitAssessmentAction(
 
     if (!quiz.is_open) {
       return { success: false, error: 'This assessment session has been closed.' };
+    }
+
+    // Re-verify session PIN to ensure candidate is participating in authorized in-class session
+    const expectedPin = (quiz.session_pin || '').trim().toUpperCase();
+    if (expectedPin && (!sessionPin || sessionPin !== expectedPin)) {
+      return { success: false, error: 'Valid active Session PIN is required to submit this assessment.' };
     }
 
     // 3. Double-check duplicate constraint before grading
@@ -447,6 +454,7 @@ export async function submitAssessmentAction(
  */
 export async function getTeacherQuizzesAction(cohortType: string = 'Regular') {
   try {
+    await requireStaffUser();
     const supabase = createAdminClient();
 
     const { data: semester } = await supabase
@@ -509,6 +517,7 @@ export async function getTeacherQuizzesAction(cohortType: string = 'Regular') {
  */
 export async function updateQuizSessionAction(input: QuizSessionUpdateInput) {
   try {
+    await requireStaffUser();
     const parseResult = quizSessionUpdateSchema.safeParse(input);
     if (!parseResult.success) {
       const firstErr = parseResult.error.errors[0]?.message || 'Invalid update parameters';

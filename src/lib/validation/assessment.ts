@@ -21,6 +21,11 @@ export const assessmentSubmissionSchema = z.object({
     .min(1, 'Matriculation number is required')
     .transform((val) => val.trim().toUpperCase()),
   quizId: z.string().uuid('Invalid Quiz ID'),
+  sessionPin: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val ? val.trim().toUpperCase() : undefined)),
   answers: z.record(
     z.string().uuid('Invalid Question ID'),
     z.number().int().min(0).max(3, 'Option index must be between 0 and 3')
