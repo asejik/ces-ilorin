@@ -92,20 +92,23 @@ export default function AssessmentPortalPage() {
     };
   }, []);
 
-  // Fetch quizzes on cohort change
+  // Fetch quizzes on cohort change (only depends on selectedCohort to avoid duplicate execution)
   useEffect(() => {
     async function loadQuizzes() {
       const res = await getAvailableQuizzesAction(selectedCohort);
       if (res.success && res.quizzes) {
         setAvailableQuizzes(res.quizzes);
-        if (res.quizzes.length > 0 && !selectedCourse) {
-          const firstOpen = res.quizzes.find((q) => q.is_open) || res.quizzes[0];
-          setSelectedCourse(firstOpen.course_code);
+        if (res.quizzes.length > 0) {
+          setSelectedCourse((prev) => {
+            if (prev) return prev;
+            const firstOpen = res.quizzes.find((q) => q.is_open) || res.quizzes[0];
+            return firstOpen.course_code;
+          });
         }
       }
     }
     loadQuizzes();
-  }, [selectedCohort, selectedCourse]);
+  }, [selectedCohort]);
 
   // Restore cached draft answers if refreshing during quiz
   useEffect(() => {

@@ -96,7 +96,7 @@ export async function getCohortGradebookAction(
     // 2. Fetch all enrolled students
     const { data: students, error: stuErr } = await supabase
       .from('ces_students')
-      .select('id, matric_no, surname, first_name, passport_url, cohort_type, status')
+      .select('id, matric_no, surname, first_name, cohort_type, status')
       .eq('semester_id', semester.id)
       .eq('is_deleted', false)
       .order('matric_no', { ascending: true });
@@ -268,7 +268,7 @@ export async function getCohortGradebookAction(
         studentId: stu.id,
         matricNo: stu.matric_no,
         fullName: `${stu.first_name} ${stu.surname}`,
-        passportUrl: stu.passport_url,
+        passportUrl: null,
         cohortType: stu.cohort_type,
         status: stu.status,
         quizzes: quizzesObj,

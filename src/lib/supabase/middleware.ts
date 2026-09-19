@@ -54,7 +54,15 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  // Efficiency: If no Supabase auth token cookie exists on the request,
+  // skip the expensive outbound network call to Supabase Auth API
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith('sb-') || c.name.includes('auth-token'));
+
+  if (hasAuthCookie) {
+    await supabase.auth.getUser();
+  }
 
   return response;
 }

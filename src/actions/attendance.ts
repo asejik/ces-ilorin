@@ -150,7 +150,8 @@ export async function getAttendanceFeedbackAction(
     let query = supabase
       .from('ces_attendance_records')
       .select('id, course_name, delivery_rating, delivery_feedback, session_date, logged_at, student:ces_students(first_name, surname, matric_no)')
-      .order('logged_at', { ascending: false });
+      .order('logged_at', { ascending: false })
+      .limit(100);
 
     if (courseName && courseName !== 'all') {
       query = query.eq('course_name', courseName);

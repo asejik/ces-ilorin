@@ -53,11 +53,18 @@ export interface SubmitAssessmentResult {
   matricNo?: string;
 }
 
+// In-memory cache of verified seeded semesters to eliminate 10 redundant queries per request
+const SEEDED_SEMESTERS_CACHE = new Set<string>();
+
 /**
  * Ensures all standard courses and questions from curriculum are seeded
  * for an active semester if not already present.
  */
 export async function ensureQuizzesAndQuestionsSeeded(semesterId: string): Promise<void> {
+  if (SEEDED_SEMESTERS_CACHE.has(semesterId)) {
+    return;
+  }
+
   const supabase = createAdminClient();
 
   const { data: existingQuizzes, error: qErr } = await supabase
@@ -125,6 +132,8 @@ export async function ensureQuizzesAndQuestionsSeeded(semesterId: string): Promi
       }
     }
   }
+
+  SEEDED_SEMESTERS_CACHE.add(semesterId);
 }
 
 /**
