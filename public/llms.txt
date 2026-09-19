@@ -1,0 +1,40 @@
+# Citizens Elementary School (CES)
+
+> Official Discipleship and Foundational Christian Education Portal for Citizens of Light Church, Ilorin, Kwara State, Nigeria.
+
+## About the Institution
+Citizens Elementary School (CES) is the foundational spiritual training school under the spiritual oversight of Pastor Daniel Olawande and Citizens of Light Church, Ilorin. CES provides structured, biblically grounded discipleship training designed to ground believers in core Christian truths, spiritual discipline, and ministerial integrity.
+
+## Academic Structure & Cohort Tracks
+CES runs parallel cohort tracks per academic session:
+- **Saturday Cohort**: Tailored for working professionals, entrepreneurs, and church members.
+- **Sunday Cohort**: Tailored for students and church attendees participating following Sunday worship.
+
+Both cohorts follow an identical 8-course foundational curriculum spanning 2 intensive lecture days, followed by continuous modular assessments and graduation clearance.
+
+## Core Curriculum & Modules
+1. **Module 1: Salvation** – The biblical theology of the new birth, redemption, grace, and eternal life.
+2. **Module 2: Righteousness** – The believer's standing in Christ, righteousness as a gift vs works, and fruitfulness.
+3. **Module 3: The Word of God** – Meditation, biblical study methods, divine guidance, and authority of scriptures.
+4. **Module 4: The Love Walk** – Agape love, forgiveness, Christian unity, and church fellowship dynamics.
+5. **Module 5: The Believer and Service** – Stewardship, excellence in kingdom service, and ministerial ethics.
+6. **Module 6: Spiritual Authority** – The believer's authority in Christ, prayer warfare, and spiritual dominion.
+7. **Module 7: The Holy Spirit** – Baptism of the Holy Spirit, gifts of the Spirit, and walking in the Spirit.
+8. **Module 8: Prayer & Fasting** – Communion with God, intercession, corporate prayer, and fasting disciplines.
+
+## Academic & Graduation Requirements
+- **Attendance**: 100% attendance across both scheduled class dates (Day 1 & Day 2) is mandatory.
+- **Continuous Assessment (CBT)**: Candidates must sit for all 8 modular quizzes. Minimum aggregate pass mark is 50%.
+- **Graduation Clearance**: Eligible candidates with verified attendance and passing scores are awarded an official digitally-verifiable graduation certificate.
+- **Honours Criteria**: Distinction (≥85%), Honours (70–84%), Merit (50–69%).
+
+## Key Web Endpoints
+- **Enrollment / Registration**: https://ces.citizensoflightchurch.org/register
+- **Candidate Assessment Portal**: https://ces.citizensoflightchurch.org/assess
+- **Class Attendance Confirmation**: https://ces.citizensoflightchurch.org/attendance
+- **Staff Administration**: https://ces.citizensoflightchurch.org/login
+
+## Contact & Location
+- Institution: Citizens of Light Church
+- Location: Ilorin, Kwara State, Nigeria
+- Website: https://ces.citizensoflightchurch.org
