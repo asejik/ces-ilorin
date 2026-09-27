@@ -61,6 +61,33 @@ describe('Attendance Validation Schemas', () => {
     };
     expect(attendanceCheckinSchema.safeParse(invalidCourse).success).toBe(false);
   });
+
+  it('accepts every registered curriculum course and institutional class', () => {
+    const courses = [
+      'Doctrine of Salvation',
+      'Righteousness of God',
+      'Integrity of the Word of God',
+      'The Love Walk & Christian Character',
+      'Ministry of Service & Church Stewardship',
+      'Spiritual Authority & Believer’s Rights',
+      'Person and Power of the Holy Spirit',
+      'Prevailing Prayer & Intercession',
+      'Elementary Principles',
+      'Membership & Vision Class',
+      'General Sunday Cohort Session',
+      'Comprehensive Review & Final Exam Preparation',
+      'Special Discipleship Seminar / Workshop',
+    ];
+
+    for (const c of courses) {
+      const res = attendanceCheckinSchema.safeParse({
+        matricNo: 'CES/ILR/26I901',
+        courseName: c,
+        deliveryRating: 5,
+      });
+      expect(res.success).toBe(true);
+    }
+  });
 });
 
 describe('Score Override Schema', () => {

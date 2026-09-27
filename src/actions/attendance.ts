@@ -16,7 +16,6 @@ export interface AttendanceCheckinResult {
   courseName?: string;
   sessionDate?: string;
   rating?: number;
-  isUpdate?: boolean;
 }
 
 export interface AttendanceFeedbackItem {
@@ -87,52 +86,53 @@ export async function submitAttendanceCheckinAction(
       };
     }
 
-    // 2. Check for existing attendance record for this student and course in this semester
+    // 2. Strictly check for existing attendance record for this student and course in this semester
     const { data: existingRecord } = await supabase
       .from('ces_attendance_records')
-      .select('id')
+      .select('id, session_date, logged_at')
       .eq('student_id', student.id)
       .eq('semester_id', student.semester_id)
       .eq('course_name', courseName)
       .maybeSingle();
 
-    let isUpdate = false;
-
     if (existingRecord) {
-      // Update existing record with refreshed rating, feedback, and session date
-      const { error: updateErr } = await supabase
-        .from('ces_attendance_records')
-        .update({
-          status: 'Attended',
-          delivery_rating: deliveryRating,
-          delivery_feedback: deliveryFeedback,
-          session_date: finalDate,
-          logged_at: new Date().toISOString(),
-        })
-        .eq('id', existingRecord.id);
+      const formattedDate = existingRecord.session_date
+        ? new Date(existingRecord.session_date + 'T00:00:00').toLocaleDateString('en-GB', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })
+        : 'an earlier date';
 
-      if (updateErr) {
-        return { success: false, error: `Failed to update attendance: ${updateErr.message}` };
-      }
-      isUpdate = true;
-    } else {
-      // Insert new attendance record
-      const { error: insErr } = await supabase
-        .from('ces_attendance_records')
-        .insert({
-          student_id: student.id,
-          semester_id: student.semester_id,
-          course_name: courseName,
-          status: 'Attended',
-          delivery_rating: deliveryRating,
-          delivery_feedback: deliveryFeedback,
-          session_date: finalDate,
-          logged_at: new Date().toISOString(),
-        });
+      return {
+        success: false,
+        error: `Attendance for "${courseName}" has already been recorded for ${student.matric_no} (${student.first_name} ${student.surname}) on ${formattedDate}. Duplicate attendance check-ins are not permitted.`,
+      };
+    }
 
-      if (insErr) {
-        return { success: false, error: `Failed to record attendance: ${insErr.message}` };
+    // 3. Insert new attendance record
+    const { error: insErr } = await supabase
+      .from('ces_attendance_records')
+      .insert({
+        student_id: student.id,
+        semester_id: student.semester_id,
+        course_name: courseName,
+        status: 'Attended',
+        delivery_rating: deliveryRating,
+        delivery_feedback: deliveryFeedback,
+        session_date: finalDate,
+        logged_at: new Date().toISOString(),
+      });
+
+    if (insErr) {
+      if (insErr.code === '23505' || insErr.message.includes('unique') || insErr.message.includes('duplicate')) {
+        return {
+          success: false,
+          error: `Attendance for "${courseName}" has already been recorded for matric number "${student.matric_no}". Duplicate attendance check-ins are not permitted.`,
+        };
       }
+      return { success: false, error: `Failed to record attendance: ${insErr.message}` };
     }
 
     const fullName = `${student.first_name} ${student.surname}`;
@@ -145,7 +145,6 @@ export async function submitAttendanceCheckinAction(
       courseName,
       sessionDate: finalDate,
       rating: deliveryRating,
-      isUpdate,
     };
   } catch (err: unknown) {
     console.error('[Attendance Checkin Error]:', err);
