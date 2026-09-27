@@ -45,6 +45,10 @@ body {
 }
 
 /* Smooth Touch Targets */
-button, input, select, textarea {
+button, input, textarea {
   touch-action: manipulation;
+}
+
+select {
+  touch-action: auto;
 }

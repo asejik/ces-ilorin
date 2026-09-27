@@ -164,7 +164,7 @@ export default function StudentAttendancePage() {
                     id="courseSelect"
                     value={courseName}
                     onChange={(e) => setCourseName(e.target.value)}
-                    className="w-full h-12 px-4 rounded-xl border border-ink-200 bg-surface text-ink-950 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-solar-500 focus:border-transparent transition-all appearance-none cursor-pointer"
+                    className="w-full h-12 px-4 rounded-xl border border-ink-200 bg-surface text-ink-950 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-solar-500 focus:border-transparent transition-colors appearance-none cursor-pointer"
                   >
                     {ATTENDANCE_COURSE_NAMES.map((name) => (
                       <option key={name} value={name}>
