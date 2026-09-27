@@ -52,3 +52,12 @@ button, input, textarea {
 select {
   touch-action: auto;
 }
+
+/* Prevent flash of login gate during mid-quiz session restoration */
+html.ces-restoring-quiz [data-gate-container] {
+  display: none !important;
+}
+
+html.ces-restoring-quiz [data-quiz-skeleton] {
+  display: flex !important;
+}
