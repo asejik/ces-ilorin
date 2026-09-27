@@ -77,7 +77,7 @@ export default function HomePage() {
 
           {/* Card 2: Online Assessments */}
           <Link
-            href="/assessment"
+            href="/assess"
             className="group p-5 bg-surface rounded-xl border border-ink-200 shadow-sm hover:border-solar-500 hover:shadow-md transition-all flex flex-col justify-between"
           >
             <div>

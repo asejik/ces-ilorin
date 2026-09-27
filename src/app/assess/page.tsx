@@ -25,6 +25,7 @@ import {
   getAvailableQuizzesAction,
   type SanitizedQuestion,
 } from '@/actions/assessment';
+import { CES_CURRICULUM } from '@/lib/curriculum';
 
 type AssessmentStep = 'access' | 'confirm' | 'taking' | 'result';
 
@@ -36,6 +37,15 @@ interface AvailableQuiz {
   max_score: number;
   is_open: boolean;
 }
+
+const DEFAULT_AVAILABLE_QUIZZES: AvailableQuiz[] = CES_CURRICULUM.map((course) => ({
+  id: course.code,
+  course_code: course.code,
+  title: course.title,
+  assessment_type: course.type,
+  max_score: course.maxScore,
+  is_open: true,
+}));
 
 interface CandidateInfo {
   id: string;
@@ -69,14 +79,13 @@ function clearActiveAssessmentSession(matricNo?: string, quizId?: string) {
 
 export default function AssessmentPortalPage() {
   const [step, setStep] = useState<AssessmentStep>('access');
-  const [availableQuizzes, setAvailableQuizzes] = useState<AvailableQuiz[]>([]);
+  const [availableQuizzes, setAvailableQuizzes] = useState<AvailableQuiz[]>(DEFAULT_AVAILABLE_QUIZZES);
   const [selectedCohort, setSelectedCohort] = useState<'Regular' | 'Sunday Cohort'>('Regular');
   const [isOnline, setIsOnline] = useState<boolean>(true);
-  const [isRestoringSession, setIsRestoringSession] = useState(true);
 
   // Form input states
   const [matricNo, setMatricNo] = useState('');
-  const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState('salvation');
   const [sessionPin, setSessionPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -130,8 +139,6 @@ export default function AssessmentPortalPage() {
       }
     } catch {
       // ignore corrupted storage
-    } finally {
-      setIsRestoringSession(false);
     }
   }, []);
 
@@ -152,15 +159,13 @@ export default function AssessmentPortalPage() {
   useEffect(() => {
     async function loadQuizzes() {
       const res = await getAvailableQuizzesAction(selectedCohort);
-      if (res.success && res.quizzes) {
+      if (res.success && res.quizzes && res.quizzes.length > 0) {
         setAvailableQuizzes(res.quizzes);
-        if (res.quizzes.length > 0) {
-          setSelectedCourse((prev) => {
-            if (prev) return prev;
-            const firstOpen = res.quizzes.find((q) => q.is_open) || res.quizzes[0];
-            return firstOpen.course_code;
-          });
-        }
+        setSelectedCourse((prev) => {
+          if (prev && res.quizzes!.some((q) => q.course_code === prev)) return prev;
+          const firstOpen = res.quizzes!.find((q) => q.is_open) || res.quizzes![0];
+          return firstOpen.course_code;
+        });
       }
     }
     loadQuizzes();
@@ -169,7 +174,6 @@ export default function AssessmentPortalPage() {
   // Persist active quiz session to localStorage whenever taking or confirming
   useEffect(() => {
     if (
-      !isRestoringSession &&
       (step === 'taking' || step === 'confirm') &&
       candidate &&
       activeQuiz &&
@@ -195,7 +199,6 @@ export default function AssessmentPortalPage() {
       }
     }
   }, [
-    isRestoringSession,
     step,
     candidate,
     activeQuiz,
@@ -336,19 +339,6 @@ export default function AssessmentPortalPage() {
     }
   };
 
-  if (isRestoringSession) {
-    return (
-      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-4">
-        <div className="w-12 h-12 rounded-2xl bg-solar-50 border border-solar-200 flex items-center justify-center text-solar-600 mb-3 shadow-xs">
-          <GraduationCap className="w-6 h-6 animate-pulse" />
-        </div>
-        <span className="text-xs font-semibold text-ink-600">
-          Restoring assessment session...
-        </span>
-      </div>
-    );
-  }
-
   const answeredCount = Object.keys(answers).length;
   const totalQuestions = questions.length;
   const currentQuestion = questions[currentQIndex];
@@ -464,7 +454,7 @@ export default function AssessmentPortalPage() {
                     id="courseSelect"
                     value={selectedCourse}
                     onChange={(e) => setSelectedCourse(e.target.value)}
-                    className="w-full h-12 px-4 rounded-xl border border-ink-200 bg-surface text-ink-950 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-solar-500 focus:border-transparent transition-all appearance-none cursor-pointer"
+                    className="w-full h-12 px-4 rounded-xl border border-ink-200 bg-surface text-ink-950 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-solar-500 focus:border-transparent transition-colors appearance-none cursor-pointer"
                   >
                     {availableQuizzes.map((quiz) => (
                       <option key={quiz.id} value={quiz.course_code}>

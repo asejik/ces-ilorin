@@ -1,1 +1,5 @@
-export { default } from '../assess/page';
+import { redirect } from 'next/navigation';
+
+export default function AssessmentRedirect() {
+  redirect('/assess');
+}

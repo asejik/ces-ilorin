@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
           '/register/success',
           '/certificate/',
           '/assessment',
+          '/assess',
         ],
       },
     ],
