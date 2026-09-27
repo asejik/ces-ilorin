@@ -14,6 +14,7 @@ import {
   getAttendanceFeedbackAction,
   type AttendanceSummaryStats,
 } from '@/actions/attendance';
+import { ATTENDANCE_COURSE_GROUPS } from '@/lib/validation/attendance';
 
 export default function AttendanceFeedbackPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>('all');
@@ -157,40 +158,62 @@ export default function AttendanceFeedbackPage() {
         </div>
 
         {/* Course Filter Bar */}
-        <div className="bg-surface rounded-2xl border border-ink-200 p-3 shadow-xs flex items-center gap-2 overflow-x-auto">
-          <span className="text-xs font-bold text-ink-500 uppercase tracking-wider px-2">
-            Filter Course:
-          </span>
-          <button
-            onClick={() => setSelectedCourse('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              selectedCourse === 'all'
-                ? 'bg-ink-950 text-white'
-                : 'text-ink-600 hover:bg-canvas'
-            }`}
-          >
-            All Courses
-          </button>
-          <button
-            onClick={() => setSelectedCourse('Elementary Principles')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              selectedCourse === 'Elementary Principles'
-                ? 'bg-ink-950 text-white'
-                : 'text-ink-600 hover:bg-canvas'
-            }`}
-          >
-            Elementary Principles
-          </button>
-          <button
-            onClick={() => setSelectedCourse('Membership & Vision Class')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              selectedCourse === 'Membership & Vision Class'
-                ? 'bg-ink-950 text-white'
-                : 'text-ink-600 hover:bg-canvas'
-            }`}
-          >
-            Membership & Vision
-          </button>
+        <div className="bg-surface rounded-2xl border border-ink-200 p-3 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-ink-500 uppercase tracking-wider px-1">
+              Filter by Lesson:
+            </span>
+            <select
+              value={selectedCourse}
+              onChange={(e) => setSelectedCourse(e.target.value)}
+              className="h-10 px-3 rounded-xl border border-ink-200 bg-surface text-ink-950 text-xs font-bold focus:ring-2 focus:ring-solar-500 focus:outline-none cursor-pointer"
+            >
+              <option value="all">All Lessons & Sessions ({stats?.totalCheckins ?? 0} total)</option>
+              {ATTENDANCE_COURSE_GROUPS.map((group) => (
+                <optgroup key={group.groupName} label={group.groupName}>
+                  {group.courses.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            <span className="text-[11px] font-semibold text-ink-400 mr-1">Quick:</span>
+            <button
+              onClick={() => setSelectedCourse('all')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                selectedCourse === 'all'
+                  ? 'bg-ink-950 text-white shadow-xs'
+                  : 'text-ink-600 bg-canvas hover:bg-ink-100'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setSelectedCourse('Elementary Principles')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                selectedCourse === 'Elementary Principles'
+                  ? 'bg-ink-950 text-white shadow-xs'
+                  : 'text-ink-600 bg-canvas hover:bg-ink-100'
+              }`}
+            >
+              Elementary Principles
+            </button>
+            <button
+              onClick={() => setSelectedCourse('Membership & Vision Class')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                selectedCourse === 'Membership & Vision Class'
+                  ? 'bg-ink-950 text-white shadow-xs'
+                  : 'text-ink-600 bg-canvas hover:bg-ink-100'
+              }`}
+            >
+              Membership & Vision
+            </button>
+          </div>
         </div>
 
         {/* Feedback Comments Stream */}
