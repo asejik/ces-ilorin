@@ -21,6 +21,17 @@ describe('Assessment Validation Schemas', () => {
       expect(parsed.data.courseCode).toBe('salvation');
       expect(parsed.data.sessionPin).toBe('SALV26');
     }
+
+    const withCohort = assessmentAccessSchema.safeParse({
+      matricNo: 'CES/ILR/26I901',
+      courseCode: 'salvation',
+      sessionPin: 'SALV26',
+      cohortType: 'Sunday Cohort',
+    });
+    expect(withCohort.success).toBe(true);
+    if (withCohort.success) {
+      expect(withCohort.data.cohortType).toBe('Sunday Cohort');
+    }
   });
 
   it('rejects missing matric number in access schema', () => {
