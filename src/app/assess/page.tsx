@@ -245,6 +245,7 @@ export default function AssessmentPortalPage() {
         matricNo,
         courseCode: selectedCourse,
         sessionPin,
+        cohortType: selectedCohort,
       });
 
       if (!res.success) {

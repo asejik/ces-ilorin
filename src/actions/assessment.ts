@@ -197,7 +197,7 @@ export async function verifyAssessmentAccessAction(
       return { success: false, error: firstErr };
     }
 
-    const { matricNo, courseCode, sessionPin } = parseResult.data;
+    const { matricNo, courseCode, sessionPin, cohortType } = parseResult.data;
     const supabase = createAdminClient();
 
     // 1. Find and validate student
@@ -219,6 +219,14 @@ export async function verifyAssessmentAccessAction(
       return {
         success: false,
         error: `Student status is ${student.status}. Only active students may take assessments.`,
+      };
+    }
+
+    // Validate cohort match
+    if (cohortType && student.cohort_type !== cohortType) {
+      return {
+        success: false,
+        error: `Matric number "${matricNo}" is registered under the "${student.cohort_type}", but "${cohortType}" is currently selected. Please switch to the ${student.cohort_type} tab above to enter your room.`,
       };
     }
 

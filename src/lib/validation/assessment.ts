@@ -13,6 +13,9 @@ export const assessmentAccessSchema = z.object({
     .string()
     .min(1, 'Session PIN is required')
     .transform((val) => val.trim().toUpperCase()),
+  cohortType: z
+    .enum(['Regular', 'Sunday Cohort'])
+    .optional(),
 });
 
 export const assessmentSubmissionSchema = z.object({
