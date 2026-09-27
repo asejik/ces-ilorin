@@ -1,10 +1,61 @@
 import { z } from 'zod';
 
 export const ATTENDANCE_COURSE_NAMES = [
+  // 8 Modular Curriculum Courses
+  'Doctrine of Salvation',
+  'Righteousness of God',
+  'Integrity of the Word of God',
+  'The Love Walk & Christian Character',
+  'Ministry of Service & Church Stewardship',
+  'Spiritual Authority & Believer’s Rights',
+  'Person and Power of the Holy Spirit',
+  'Prevailing Prayer & Intercession',
+
+  // Core Mandatory Institutional Classes (Required for Graduation)
   'Elementary Principles',
   'Membership & Vision Class',
+
+  // Cohort & General Training Sessions
   'General Sunday Cohort Session',
+  'Comprehensive Review & Final Exam Preparation',
+  'Special Discipleship Seminar / Workshop',
 ] as const;
+
+export interface AttendanceCourseGroup {
+  groupName: string;
+  courses: readonly string[];
+}
+
+export const ATTENDANCE_COURSE_GROUPS: AttendanceCourseGroup[] = [
+  {
+    groupName: 'Curriculum Course Lessons (8 Modules)',
+    courses: [
+      'Doctrine of Salvation',
+      'Righteousness of God',
+      'Integrity of the Word of God',
+      'The Love Walk & Christian Character',
+      'Ministry of Service & Church Stewardship',
+      'Spiritual Authority & Believer’s Rights',
+      'Person and Power of the Holy Spirit',
+      'Prevailing Prayer & Intercession',
+    ],
+  },
+  {
+    groupName: 'Mandatory Institutional Classes (Required for Graduation)',
+    courses: [
+      'Elementary Principles',
+      'Membership & Vision Class',
+    ],
+  },
+  {
+    groupName: 'Cohort & Special Training Sessions',
+    courses: [
+      'General Sunday Cohort Session',
+      'Comprehensive Review & Final Exam Preparation',
+      'Special Discipleship Seminar / Workshop',
+    ],
+  },
+];
 
 export const attendanceCheckinSchema = z.object({
   matricNo: z
@@ -14,6 +65,12 @@ export const attendanceCheckinSchema = z.object({
   courseName: z.enum(ATTENDANCE_COURSE_NAMES, {
     errorMap: () => ({ message: 'Please select a valid course session' }),
   }),
+  sessionDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Please select a valid date in YYYY-MM-DD format')
+    .optional()
+    .nullable()
+    .transform((val) => (val ? val.trim() : undefined)),
   deliveryRating: z
     .number()
     .int('Rating must be an integer')

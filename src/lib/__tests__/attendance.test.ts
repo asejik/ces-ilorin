@@ -7,10 +7,11 @@ import {
 import { determineGraduationStatus } from '../academic';
 
 describe('Attendance Validation Schemas', () => {
-  it('validates a correct attendance check-in with rating and feedback', () => {
+  it('validates a correct attendance check-in with rating, feedback, and session date', () => {
     const valid = {
       matricNo: '  ces/ilr/26i901  ',
-      courseName: 'Elementary Principles',
+      courseName: 'Doctrine of Salvation',
+      sessionDate: '2026-09-20',
       deliveryRating: 5,
       deliveryFeedback: 'The class was deeply transformative and clear.',
     };
@@ -19,10 +20,21 @@ describe('Attendance Validation Schemas', () => {
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.matricNo).toBe('CES/ILR/26I901');
-      expect(parsed.data.courseName).toBe('Elementary Principles');
+      expect(parsed.data.courseName).toBe('Doctrine of Salvation');
+      expect(parsed.data.sessionDate).toBe('2026-09-20');
       expect(parsed.data.deliveryRating).toBe(5);
       expect(parsed.data.deliveryFeedback).toBe('The class was deeply transformative and clear.');
     }
+  });
+
+  it('rejects invalid sessionDate format in attendance check-in', () => {
+    const invalidDate = {
+      matricNo: 'CES/ILR/26I901',
+      courseName: 'Doctrine of Salvation',
+      sessionDate: '20-09-2026', // invalid, must be YYYY-MM-DD
+      deliveryRating: 5,
+    };
+    expect(attendanceCheckinSchema.safeParse(invalidDate).success).toBe(false);
   });
 
   it('rejects invalid star rating outside 1..5', () => {

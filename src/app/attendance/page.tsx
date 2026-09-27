@@ -10,15 +10,21 @@ import {
   ArrowLeft,
   Home,
   BookOpen,
+  Calendar,
   MessageSquareQuote,
   RotateCcw,
 } from 'lucide-react';
 import { submitAttendanceCheckinAction } from '@/actions/attendance';
-import { ATTENDANCE_COURSE_NAMES } from '@/lib/validation/attendance';
+import {
+  ATTENDANCE_COURSE_NAMES,
+  ATTENDANCE_COURSE_GROUPS,
+} from '@/lib/validation/attendance';
 
 export default function StudentAttendancePage() {
+  const todayIso = new Date().toISOString().split('T')[0];
   const [matricNo, setMatricNo] = useState('');
   const [courseName, setCourseName] = useState<string>(ATTENDANCE_COURSE_NAMES[0]);
+  const [sessionDate, setSessionDate] = useState<string>(todayIso);
   const [rating, setRating] = useState<number>(5);
   const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [feedback, setFeedback] = useState('');
@@ -29,7 +35,9 @@ export default function StudentAttendancePage() {
   const [receipt, setReceipt] = useState<{
     studentName: string;
     matricNo: string;
+    cohortType?: string;
     courseName: string;
+    sessionDate?: string;
     rating: number;
     isUpdate: boolean;
   } | null>(null);
@@ -51,11 +59,17 @@ export default function StudentAttendancePage() {
       return;
     }
 
+    if (!sessionDate) {
+      setErrorMsg('Please select the date of the class session');
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await submitAttendanceCheckinAction({
         matricNo,
         courseName: courseName as (typeof ATTENDANCE_COURSE_NAMES)[number],
+        sessionDate,
         deliveryRating: rating,
         deliveryFeedback: feedback || null,
       });
@@ -69,7 +83,9 @@ export default function StudentAttendancePage() {
       setReceipt({
         studentName: res.studentName || 'Student',
         matricNo: res.matricNo || matricNo,
+        cohortType: res.cohortType,
         courseName: res.courseName || courseName,
+        sessionDate: res.sessionDate || sessionDate,
         rating: res.rating || rating,
         isUpdate: res.isUpdate || false,
       });
@@ -154,10 +170,30 @@ export default function StudentAttendancePage() {
                 />
               </div>
 
+              {/* Date of Class / Lesson */}
+              <div>
+                <label htmlFor="dateInput" className="block text-xs font-bold text-ink-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+                  <span>Class / Lesson Date</span>
+                  <span className="text-[11px] text-ink-400 font-normal">Today or past class</span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="dateInput"
+                    type="date"
+                    max={todayIso}
+                    value={sessionDate}
+                    onChange={(e) => setSessionDate(e.target.value)}
+                    required
+                    className="w-full h-12 px-4 rounded-xl border border-ink-200 bg-surface text-ink-950 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-solar-500 focus:border-transparent transition-colors cursor-pointer"
+                  />
+                  <Calendar className="w-4 h-4 text-ink-400 absolute right-4 top-4 pointer-events-none" />
+                </div>
+              </div>
+
               {/* Course Selection */}
               <div>
                 <label htmlFor="courseSelect" className="block text-xs font-bold text-ink-700 uppercase tracking-wider mb-2">
-                  Mandatory Class / Session
+                  Class / Lesson Session
                 </label>
                 <div className="relative">
                   <select
@@ -166,16 +202,20 @@ export default function StudentAttendancePage() {
                     onChange={(e) => setCourseName(e.target.value)}
                     className="w-full h-12 px-4 rounded-xl border border-ink-200 bg-surface text-ink-950 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-solar-500 focus:border-transparent transition-colors appearance-none cursor-pointer"
                   >
-                    {ATTENDANCE_COURSE_NAMES.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
+                    {ATTENDANCE_COURSE_GROUPS.map((group) => (
+                      <optgroup key={group.groupName} label={group.groupName}>
+                        {group.courses.map((name) => (
+                          <option key={name} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                   <BookOpen className="w-4 h-4 text-ink-400 absolute right-4 top-4 pointer-events-none" />
                 </div>
                 <span className="text-[11px] text-ink-400 mt-1 block">
-                  Attendance in Elementary Principles & Membership Class is strictly required for graduation.
+                  Select any course module, Sunday cohort lecture, or mandatory discipleship session.
                 </span>
               </div>
 
@@ -279,10 +319,40 @@ export default function StudentAttendancePage() {
                   {receipt.matricNo}
                 </span>
               </div>
+              {receipt.cohortType && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-ink-500">Registered Cohort:</span>
+                  <span
+                    className={`px-2 py-0.5 rounded font-bold text-[11px] ${
+                      receipt.cohortType === 'Sunday Cohort'
+                        ? 'bg-sunday-bg text-sunday-accent border border-sunday-accent/30'
+                        : 'bg-solar-50 text-solar-800 border border-solar-200'
+                    }`}
+                  >
+                    {receipt.cohortType}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center text-xs">
                 <span className="text-ink-500">Course Session:</span>
                 <strong className="text-ink-950">{receipt.courseName}</strong>
               </div>
+              {receipt.sessionDate && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-ink-500">Class Date:</span>
+                  <span className="font-semibold text-ink-900 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-solar-600" />
+                    <span>
+                      {new Date(receipt.sessionDate + 'T00:00:00').toLocaleDateString(undefined, {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center text-xs">
                 <span className="text-ink-500">Status:</span>
                 <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-status-graduate-bg text-status-graduate-text border border-status-graduate-dot/30">

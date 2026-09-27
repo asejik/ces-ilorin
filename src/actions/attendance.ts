@@ -12,7 +12,9 @@ export interface AttendanceCheckinResult {
   error?: string;
   studentName?: string;
   matricNo?: string;
+  cohortType?: string;
   courseName?: string;
+  sessionDate?: string;
   rating?: number;
   isUpdate?: boolean;
 }
@@ -49,7 +51,18 @@ export async function submitAttendanceCheckinAction(
       return { success: false, error: firstErr };
     }
 
-    const { matricNo, courseName, deliveryRating, deliveryFeedback } = parseResult.data;
+    const { matricNo, courseName, sessionDate, deliveryRating, deliveryFeedback } = parseResult.data;
+    const finalDate = sessionDate || new Date().toISOString().split('T')[0];
+
+    // Prevent future dates
+    const today = new Date().toISOString().split('T')[0];
+    if (finalDate > today) {
+      return {
+        success: false,
+        error: 'Class attendance date cannot be in the future. Please select today or a past class date.',
+      };
+    }
+
     const supabase = createAdminClient();
 
     // 1. Validate student
@@ -86,14 +99,14 @@ export async function submitAttendanceCheckinAction(
     let isUpdate = false;
 
     if (existingRecord) {
-      // Update existing record with refreshed rating, feedback, and timestamp
+      // Update existing record with refreshed rating, feedback, and session date
       const { error: updateErr } = await supabase
         .from('ces_attendance_records')
         .update({
           status: 'Attended',
           delivery_rating: deliveryRating,
           delivery_feedback: deliveryFeedback,
-          session_date: new Date().toISOString().split('T')[0],
+          session_date: finalDate,
           logged_at: new Date().toISOString(),
         })
         .eq('id', existingRecord.id);
@@ -113,7 +126,8 @@ export async function submitAttendanceCheckinAction(
           status: 'Attended',
           delivery_rating: deliveryRating,
           delivery_feedback: deliveryFeedback,
-          session_date: new Date().toISOString().split('T')[0],
+          session_date: finalDate,
+          logged_at: new Date().toISOString(),
         });
 
       if (insErr) {
@@ -127,7 +141,9 @@ export async function submitAttendanceCheckinAction(
       success: true,
       studentName: fullName,
       matricNo: student.matric_no,
+      cohortType: student.cohort_type,
       courseName,
+      sessionDate: finalDate,
       rating: deliveryRating,
       isUpdate,
     };
