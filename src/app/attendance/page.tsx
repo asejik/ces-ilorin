@@ -39,7 +39,6 @@ export default function StudentAttendancePage() {
     courseName: string;
     sessionDate?: string;
     rating: number;
-    isUpdate: boolean;
   } | null>(null);
 
   const RATING_LABELS: Record<number, string> = {
@@ -87,7 +86,6 @@ export default function StudentAttendancePage() {
         courseName: res.courseName || courseName,
         sessionDate: res.sessionDate || sessionDate,
         rating: res.rating || rating,
-        isUpdate: res.isUpdate || false,
       });
     } catch {
       setErrorMsg('An unexpected network error occurred. Please try again.');
@@ -302,7 +300,7 @@ export default function StudentAttendancePage() {
             </div>
 
             <h2 className="font-heading font-bold text-2xl sm:text-3xl text-ink-950 tracking-tight">
-              {receipt.isUpdate ? 'Attendance Updated!' : 'Attendance Confirmed!'}
+              Attendance Confirmed!
             </h2>
             <p className="text-xs sm:text-sm text-ink-600 mt-1 mb-6">
               Thank you <strong>{receipt.studentName}</strong>, your attendance record has been logged.
