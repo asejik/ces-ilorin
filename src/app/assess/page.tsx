@@ -53,11 +53,26 @@ interface QuizInfo {
   questionCount: number;
 }
 
+const ACTIVE_ASSESSMENT_SESSION_KEY = 'ces_active_assessment_session';
+
+function clearActiveAssessmentSession(matricNo?: string, quizId?: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(ACTIVE_ASSESSMENT_SESSION_KEY);
+    if (matricNo && quizId) {
+      localStorage.removeItem(`ces_quiz_draft_${matricNo}_${quizId}`);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 export default function AssessmentPortalPage() {
   const [step, setStep] = useState<AssessmentStep>('access');
   const [availableQuizzes, setAvailableQuizzes] = useState<AvailableQuiz[]>([]);
   const [selectedCohort, setSelectedCohort] = useState<'Regular' | 'Sunday Cohort'>('Regular');
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
 
   // Form input states
   const [matricNo, setMatricNo] = useState('');
@@ -78,6 +93,47 @@ export default function AssessmentPortalPage() {
   const [resultScore, setResultScore] = useState<number | null>(null);
   const [resultMaxScore, setResultMaxScore] = useState<number | null>(null);
   const [resultPercentage, setResultPercentage] = useState<number | null>(null);
+
+  // Restore active assessment session if page was refreshed mid-quiz
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(ACTIVE_ASSESSMENT_SESSION_KEY);
+      if (raw) {
+        const session = JSON.parse(raw);
+        const maxAgeMs = 4 * 60 * 60 * 1000; // 4 hours validity
+        if (
+          session &&
+          typeof session === 'object' &&
+          Date.now() - (session.savedAt || 0) < maxAgeMs
+        ) {
+          if (
+            (session.step === 'taking' || session.step === 'confirm') &&
+            session.candidate &&
+            session.activeQuiz &&
+            Array.isArray(session.questions) &&
+            session.questions.length > 0
+          ) {
+            setCandidate(session.candidate);
+            setActiveQuiz(session.activeQuiz);
+            setQuestions(session.questions);
+            setSessionPin(session.sessionPin || '');
+            setCurrentQIndex(typeof session.currentQIndex === 'number' ? session.currentQIndex : 0);
+            setAnswers(session.answers || {});
+            if (session.selectedCohort) setSelectedCohort(session.selectedCohort);
+            if (session.selectedCourse) setSelectedCourse(session.selectedCourse);
+            if (session.matricNo) setMatricNo(session.matricNo);
+            setStep(session.step);
+          }
+        } else {
+          localStorage.removeItem(ACTIVE_ASSESSMENT_SESSION_KEY);
+        }
+      }
+    } catch {
+      // ignore corrupted storage
+    } finally {
+      setIsRestoringSession(false);
+    }
+  }, []);
 
   // Monitor online status
   useEffect(() => {
@@ -110,23 +166,47 @@ export default function AssessmentPortalPage() {
     loadQuizzes();
   }, [selectedCohort]);
 
-  // Restore cached draft answers if refreshing during quiz
+  // Persist active quiz session to localStorage whenever taking or confirming
   useEffect(() => {
-    if (activeQuiz && candidate) {
-      const draftKey = `ces_quiz_draft_${candidate.matricNo}_${activeQuiz.id}`;
-      const saved = localStorage.getItem(draftKey);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed === 'object') {
-            setAnswers(parsed);
-          }
-        } catch {
-          // ignore corrupted localstorage
-        }
+    if (
+      !isRestoringSession &&
+      (step === 'taking' || step === 'confirm') &&
+      candidate &&
+      activeQuiz &&
+      questions.length > 0
+    ) {
+      try {
+        const sessionData = {
+          step,
+          candidate,
+          activeQuiz,
+          questions,
+          sessionPin,
+          currentQIndex,
+          answers,
+          selectedCohort,
+          selectedCourse,
+          matricNo,
+          savedAt: Date.now(),
+        };
+        localStorage.setItem(ACTIVE_ASSESSMENT_SESSION_KEY, JSON.stringify(sessionData));
+      } catch {
+        // quota exceeded or private mode
       }
     }
-  }, [activeQuiz, candidate]);
+  }, [
+    isRestoringSession,
+    step,
+    candidate,
+    activeQuiz,
+    questions,
+    sessionPin,
+    currentQIndex,
+    answers,
+    selectedCohort,
+    selectedCourse,
+    matricNo,
+  ]);
 
   // Save answer to state & localStorage
   const handleSelectOption = (questionId: string, optionIndex: number) => {
@@ -210,9 +290,8 @@ export default function AssessmentPortalPage() {
         return;
       }
 
-      // Clear cached draft upon successful submission
-      const draftKey = `ces_quiz_draft_${candidate.matricNo}_${activeQuiz.id}`;
-      localStorage.removeItem(draftKey);
+      // Clear cached session & draft upon successful submission
+      clearActiveAssessmentSession(candidate.matricNo, activeQuiz.id);
 
       setResultScore(res.score ?? 0);
       setResultMaxScore(res.maxScore ?? activeQuiz.maxScore);
@@ -228,12 +307,47 @@ export default function AssessmentPortalPage() {
 
   // Reset to take another quiz
   const handleTakeAnother = () => {
+    clearActiveAssessmentSession(candidate?.matricNo, activeQuiz?.id);
     setStep('access');
+    setCandidate(null);
+    setActiveQuiz(null);
+    setQuestions([]);
     setAnswers({});
     setCurrentQIndex(0);
     setErrorMsg(null);
     setSessionPin('');
   };
+
+  // Exit / Abandon active quiz
+  const handleAbandonQuiz = () => {
+    if (
+      window.confirm(
+        'Are you sure you want to exit this assessment? Any unsubmitted progress will be discarded.'
+      )
+    ) {
+      clearActiveAssessmentSession(candidate?.matricNo, activeQuiz?.id);
+      setStep('access');
+      setCandidate(null);
+      setActiveQuiz(null);
+      setQuestions([]);
+      setAnswers({});
+      setCurrentQIndex(0);
+      setErrorMsg(null);
+    }
+  };
+
+  if (isRestoringSession) {
+    return (
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-4">
+        <div className="w-12 h-12 rounded-2xl bg-solar-50 border border-solar-200 flex items-center justify-center text-solar-600 mb-3 shadow-xs">
+          <GraduationCap className="w-6 h-6 animate-pulse" />
+        </div>
+        <span className="text-xs font-semibold text-ink-600">
+          Restoring assessment session...
+        </span>
+      </div>
+    );
+  }
 
   const answeredCount = Object.keys(answers).length;
   const totalQuestions = questions.length;
@@ -477,7 +591,13 @@ export default function AssessmentPortalPage() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setStep('access')}
+                onClick={() => {
+                  clearActiveAssessmentSession(candidate?.matricNo, activeQuiz?.id);
+                  setStep('access');
+                  setCandidate(null);
+                  setActiveQuiz(null);
+                  setQuestions([]);
+                }}
                 className="h-11 px-4 rounded-xl border border-ink-300 text-xs font-bold text-ink-700 hover:bg-canvas transition-colors"
               >
                 Cancel
@@ -509,8 +629,17 @@ export default function AssessmentPortalPage() {
                   <span className="text-ink-400">·</span>
                   <span className="font-mono text-ink-600">{candidate.matricNo}</span>
                 </div>
-                <div className="font-bold text-ink-700">
-                  Question {currentQIndex + 1} of {totalQuestions}
+                <div className="flex items-center gap-3">
+                  <div className="font-bold text-ink-700">
+                    Question {currentQIndex + 1} of {totalQuestions}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAbandonQuiz}
+                    className="text-[11px] font-medium text-ink-400 hover:text-red-600 underline transition-colors"
+                  >
+                    Exit Test
+                  </button>
                 </div>
               </div>
 
