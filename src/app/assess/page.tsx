@@ -69,6 +69,7 @@ function clearActiveAssessmentSession(matricNo?: string, quizId?: string) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.removeItem(ACTIVE_ASSESSMENT_SESSION_KEY);
+    document.documentElement.classList.remove('ces-restoring-quiz');
     if (matricNo && quizId) {
       localStorage.removeItem(`ces_quiz_draft_${matricNo}_${quizId}`);
     }
@@ -139,6 +140,8 @@ export default function AssessmentPortalPage() {
       }
     } catch {
       // ignore corrupted storage
+    } finally {
+      document.documentElement.classList.remove('ces-restoring-quiz');
     }
   }, []);
 
@@ -346,6 +349,13 @@ export default function AssessmentPortalPage() {
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col justify-between">
+      {/* Inline script executed synchronously before first paint to prevent flash of login gate when restoring an active quiz session */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){try{var r=localStorage.getItem('${ACTIVE_ASSESSMENT_SESSION_KEY}');if(r){var s=JSON.parse(r);if(s&&(s.step==='taking'||s.step==='confirm')){document.documentElement.classList.add('ces-restoring-quiz');}}}catch(e){}})();`,
+        }}
+      />
+
       {/* Top Navigation Bar */}
       <header className="border-b border-ink-200 bg-surface/90 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-8 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -390,7 +400,24 @@ export default function AssessmentPortalPage() {
         {/* STEP 1: ACCESS GATE                                                 */}
         {/* =================================================================== */}
         {step === 'access' && (
-          <div className="bg-surface rounded-2xl border border-ink-200 shadow-md p-6 sm:p-10 relative overflow-hidden">
+          <>
+            {/* Quiz Restoration Skeleton - displayed immediately by CSS if ces-restoring-quiz class is present */}
+            <div
+              data-quiz-skeleton
+              className="hidden min-h-[380px] flex-col items-center justify-center p-8 bg-surface rounded-2xl border border-ink-200 shadow-md max-w-xl mx-auto w-full text-center animate-pulse"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-solar-50 border border-solar-200 flex items-center justify-center text-solar-600 mb-4 shadow-xs mx-auto">
+                <GraduationCap className="w-7 h-7" />
+              </div>
+              <h2 className="font-heading font-bold text-lg text-ink-950 mb-1">
+                Resuming Assessment Session...
+              </h2>
+              <p className="text-xs text-ink-500 max-w-xs mx-auto">
+                Restoring your question answers and session progress.
+              </p>
+            </div>
+
+            <div data-gate-container className="bg-surface rounded-2xl border border-ink-200 shadow-md p-6 sm:p-10 relative overflow-hidden">
             <div className="absolute top-0 inset-x-0 h-2 bg-solar-500" />
 
             <div className="text-center max-w-md mx-auto mb-8">
@@ -514,7 +541,8 @@ export default function AssessmentPortalPage() {
               </button>
             </form>
           </div>
-        )}
+        </>
+      )}
 
         {/* =================================================================== */}
         {/* STEP 2: CANDIDATE CONFIRMATION                                      */}
