@@ -26,6 +26,46 @@ export default function RegisterPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
+  // Mandatory fields state tracking for enabling the registration button
+  const [formFields, setFormFields] = useState({
+    surname: '',
+    first_name: '',
+    gender: '',
+    marital_status: '',
+    phone_number: '',
+    email_address: '',
+    born_again: '',
+    baptised_hs: '',
+    attended_mem_vision: '',
+    committed_to_programme: '',
+  });
+  const [ndpaConsent, setNdpaConsent] = useState(false);
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormFields((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const isEmailValid = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  };
+
+  const isFormValid = Boolean(
+    formFields.surname.trim().length >= 2 &&
+    formFields.first_name.trim().length >= 2 &&
+    Boolean(formFields.gender) &&
+    Boolean(formFields.marital_status) &&
+    formFields.phone_number.trim().length >= 8 &&
+    isEmailValid(formFields.email_address) &&
+    Boolean(formFields.born_again) &&
+    Boolean(formFields.baptised_hs) &&
+    Boolean(formFields.attended_mem_vision) &&
+    Boolean(formFields.committed_to_programme) &&
+    ndpaConsent
+  );
+
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -204,6 +244,8 @@ export default function RegisterPage() {
                 <input
                   type="text"
                   name="surname"
+                  value={formFields.surname}
+                  onChange={handleInputChange}
                   required
                   placeholder="e.g. Adeyemi"
                   className="w-full h-11 px-3 text-sm rounded-lg border border-ink-200 focus:ring-2 focus:ring-solar-500 focus:outline-none"
@@ -217,6 +259,8 @@ export default function RegisterPage() {
                 <input
                   type="text"
                   name="first_name"
+                  value={formFields.first_name}
+                  onChange={handleInputChange}
                   required
                   placeholder="e.g. David"
                   className="w-full h-11 px-3 text-sm rounded-lg border border-ink-200 focus:ring-2 focus:ring-solar-500 focus:outline-none"
@@ -243,8 +287,9 @@ export default function RegisterPage() {
                 </label>
                 <select
                   name="gender"
+                  value={formFields.gender}
+                  onChange={handleInputChange}
                   required
-                  defaultValue=""
                   className="w-full h-11 px-3 text-sm rounded-lg border border-ink-200 bg-surface focus:ring-2 focus:ring-solar-500 focus:outline-none"
                 >
                   <option value="" disabled>Select Gender</option>
@@ -259,8 +304,9 @@ export default function RegisterPage() {
                 </label>
                 <select
                   name="marital_status"
+                  value={formFields.marital_status}
+                  onChange={handleInputChange}
                   required
-                  defaultValue=""
                   className="w-full h-11 px-3 text-sm rounded-lg border border-ink-200 bg-surface focus:ring-2 focus:ring-solar-500 focus:outline-none"
                 >
                   <option value="" disabled>Select Status</option>
@@ -314,6 +360,8 @@ export default function RegisterPage() {
                 <input
                   type="tel"
                   name="phone_number"
+                  value={formFields.phone_number}
+                  onChange={handleInputChange}
                   required
                   placeholder="08012345678"
                   className="w-full h-11 px-3 text-sm rounded-lg border border-ink-200 focus:ring-2 focus:ring-solar-500 focus:outline-none"
@@ -339,6 +387,8 @@ export default function RegisterPage() {
                 <input
                   type="email"
                   name="email_address"
+                  value={formFields.email_address}
+                  onChange={handleInputChange}
                   required
                   placeholder="name@example.com"
                   className="w-full h-11 px-3 text-sm rounded-lg border border-ink-200 focus:ring-2 focus:ring-solar-500 focus:outline-none"
@@ -401,8 +451,9 @@ export default function RegisterPage() {
                 </label>
                 <select
                   name="born_again"
+                  value={formFields.born_again}
+                  onChange={handleInputChange}
                   required
-                  defaultValue=""
                   className="w-full h-11 px-3 text-sm rounded-lg border border-ink-200 bg-surface focus:ring-2 focus:ring-solar-500 focus:outline-none"
                 >
                   <option value="" disabled>Select</option>
@@ -417,8 +468,9 @@ export default function RegisterPage() {
                 </label>
                 <select
                   name="baptised_hs"
+                  value={formFields.baptised_hs}
+                  onChange={handleInputChange}
                   required
-                  defaultValue=""
                   className="w-full h-11 px-3 text-sm rounded-lg border border-ink-200 bg-surface focus:ring-2 focus:ring-solar-500 focus:outline-none"
                 >
                   <option value="" disabled>Select</option>
@@ -487,8 +539,9 @@ export default function RegisterPage() {
                 </label>
                 <select
                   name="attended_mem_vision"
+                  value={formFields.attended_mem_vision}
+                  onChange={handleInputChange}
                   required
-                  defaultValue=""
                   className="w-full h-11 px-3 text-sm rounded-lg border border-ink-200 bg-surface focus:ring-2 focus:ring-solar-500 focus:outline-none"
                 >
                   <option value="" disabled>Select</option>
@@ -503,8 +556,9 @@ export default function RegisterPage() {
                 </label>
                 <select
                   name="committed_to_programme"
+                  value={formFields.committed_to_programme}
+                  onChange={handleInputChange}
                   required
-                  defaultValue=""
                   className="w-full h-11 px-3 text-sm rounded-lg border border-ink-200 bg-surface focus:ring-2 focus:ring-solar-500 focus:outline-none"
                 >
                   <option value="" disabled>Select</option>
@@ -581,9 +635,11 @@ export default function RegisterPage() {
               <input
                 type="checkbox"
                 name="ndpa_consent"
+                id="ndpa_consent"
                 required
-                defaultChecked
-                className="w-4 h-4 mt-0.5 rounded border-ink-300 text-solar-600 focus:ring-solar-500 shrink-0"
+                checked={ndpaConsent}
+                onChange={(e) => setNdpaConsent(e.target.checked)}
+                className="w-4 h-4 mt-0.5 rounded border-ink-300 text-solar-600 focus:ring-solar-500 shrink-0 cursor-pointer"
               />
               <span className="text-xs text-ink-700 leading-relaxed">
                 <strong className="text-ink-950 font-semibold">Data Privacy & Consent (NDPA 2023):</strong> I consent to Citizens of Light Church / Citizens Elementary School collecting, storing, and processing my personal, contact, and academic information strictly for cohort enrollment, discipleship progress, and graduation certification in accordance with the Nigeria Data Protection Act (NDPA 2023).
@@ -595,8 +651,12 @@ export default function RegisterPage() {
           <div className="pt-2">
             <button
               type="submit"
-              disabled={loading}
-              className="w-full h-12 rounded-xl bg-ink-950 text-white font-medium text-base hover:bg-ink-800 active:scale-[0.99] transition-all flex items-center justify-center gap-2 shadow-md focus:outline-none focus:ring-2 focus:ring-solar-500 focus:ring-offset-2 disabled:opacity-75 disabled:cursor-not-allowed"
+              disabled={!isFormValid || loading}
+              className={`w-full h-12 rounded-xl font-semibold text-base transition-all flex items-center justify-center gap-2 ${
+                isFormValid && !loading
+                  ? 'bg-ink-950 text-white hover:bg-ink-800 active:scale-[0.99] cursor-pointer shadow-md focus:outline-none focus:ring-2 focus:ring-solar-500 focus:ring-offset-2'
+                  : 'bg-ink-100 text-ink-400 border border-ink-200 cursor-not-allowed shadow-none'
+              }`}
             >
               {loading ? (
                 <>
@@ -605,13 +665,21 @@ export default function RegisterPage() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-5 h-5 text-solar-400" />
+                  <Sparkles className={`w-5 h-5 ${isFormValid ? 'text-solar-400' : 'text-ink-300'}`} />
                   Complete Registration & Generate Matric No.
                 </>
               )}
             </button>
-            <p className="text-center text-xs text-ink-500 mt-3">
-              By submitting, your official admission number will be generated immediately and a welcome email will be dispatched.
+            <p className="text-center text-xs mt-3 flex items-center justify-center gap-1.5">
+              {!isFormValid ? (
+                <span className="text-ink-500">
+                  Please complete all mandatory fields (<strong className="text-status-notyet-dot">*</strong>) and accept the Data Privacy consent to activate registration.
+                </span>
+              ) : (
+                <span className="text-ink-600">
+                  Ready to register! Your official admission number will be generated immediately.
+                </span>
+              )}
             </p>
           </div>
         </form>
