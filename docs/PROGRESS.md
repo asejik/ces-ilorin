@@ -2,7 +2,7 @@
 
 ## Status Summary
 - **Current Phase**: P07 (Build Milestones)
-- **Active Task**: Post-build remediation (2026-10-22): privacy cleanup done; independent re-run of audits P02-P05/P08 pending (earlier audit reports are untrusted/superseded)
+- **Active Task**: Post-build remediation (2026-10-22): privacy cleanup done; independent audits P02-P05/P08 re-run (verdict NOT READY, P05 grade F); awaiting owner approval of finding IDs before any fix
 - **Rigor Level**: STRICT
 - **Working Tree**: Clean. Typecheck 0 errors, Vitest 64/64, `next build` OK, lint warnings only (2026-10-22). Project now lives at `D:devces`.
 
