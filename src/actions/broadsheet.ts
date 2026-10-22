@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { failWith } from '@/lib/errors';
 import { requireStaffUser } from '@/lib/auth/guard';
 import { signPassportPaths } from '@/lib/passport-photos';
 import {
@@ -61,7 +62,7 @@ export async function getBroadsheetAction(
       .order('matric_no', { ascending: true });
 
     if (stuErr) {
-      return { success: false, error: `Failed to fetch students: ${stuErr.message}` };
+      return failWith('broadsheet', stuErr, 'Failed to fetch students. Please try again.');
     }
 
     const studentIds = (students || []).map((s) => s.id);
@@ -73,7 +74,7 @@ export async function getBroadsheetAction(
       .eq('semester_id', semester.id);
 
     if (qzErr) {
-      return { success: false, error: `Failed to fetch quizzes: ${qzErr.message}` };
+      return failWith('broadsheet', qzErr, 'Failed to fetch quizzes. Please try again.');
     }
 
     const quizCodeMap = new Map((quizzes || []).map((q) => [q.course_code, q]));
@@ -452,7 +453,7 @@ export async function issueCertificateAction(
       .single();
 
     if (insErr || !newCert) {
-      return { success: false, error: `Failed to issue certificate: ${insErr?.message}` };
+      return failWith('broadsheet', insErr, 'Failed to issue certificate. Please try again.');
     }
 
     return {
@@ -523,7 +524,7 @@ export async function batchIssueCertificatesAction(
 
     if (insertErr) {
       console.error('[Batch Issue Certificates DB Error]:', insertErr);
-      return { success: false, error: `Database error while batch issuing certificates: ${insertErr.message}` };
+      return failWith('broadsheet', insertErr, 'Database error while batch issuing certificates. Please try again.');
     }
 
     return {

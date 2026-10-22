@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { failWith } from '@/lib/errors';
 import { requireStaffUser } from '@/lib/auth/guard';
 import {
   scoreOverrideSchema,
@@ -104,7 +105,7 @@ export async function getCohortGradebookAction(
       .order('matric_no', { ascending: true });
 
     if (stuErr) {
-      return { success: false, error: `Failed to fetch students: ${stuErr.message}` };
+      return failWith('gradebook', stuErr, 'Failed to fetch students. Please try again.');
     }
 
     // 3. Fetch all quizzes for this semester
@@ -114,7 +115,7 @@ export async function getCohortGradebookAction(
       .eq('semester_id', semester.id);
 
     if (qzErr) {
-      return { success: false, error: `Failed to fetch quizzes: ${qzErr.message}` };
+      return failWith('gradebook', qzErr, 'Failed to fetch quizzes. Please try again.');
     }
 
     const quizCodeMap = new Map((quizzes || []).map((q) => [q.course_code, q]));
@@ -327,6 +328,19 @@ export async function overrideStudentScoreAction(
     const staff = await requireStaffUser();
     const supabase = createAdminClient();
 
+    // The real maximum comes from the quiz row, never from the browser.
+    const { data: quizRow } = await supabase
+      .from('ces_quizzes')
+      .select('max_score')
+      .eq('id', quizId)
+      .maybeSingle();
+    if (!quizRow) {
+      return { success: false, error: 'Assessment not found.' };
+    }
+    if (newScore > Number(quizRow.max_score)) {
+      return { success: false, error: `Score cannot exceed the maximum of ${Number(quizRow.max_score)} for this assessment.` };
+    }
+
     // Check if score already exists
     const { data: existing } = await supabase
       .from('ces_student_assessments')
@@ -349,7 +363,7 @@ export async function overrideStudentScoreAction(
         .eq('id', existing.id);
 
       if (updErr) {
-        return { success: false, error: `Failed to update score: ${updErr.message}` };
+        return failWith('gradebook', updErr, 'Failed to update score. Please try again.');
       }
     } else {
       // Insert manual offline score
@@ -364,7 +378,7 @@ export async function overrideStudentScoreAction(
         });
 
       if (insErr) {
-        return { success: false, error: `Failed to record override score: ${insErr.message}` };
+        return failWith('gradebook', insErr, 'Failed to record override score. Please try again.');
       }
     }
 
@@ -420,7 +434,7 @@ export async function overrideStudentAttendanceAction(
         })
         .eq('id', existing.id);
 
-      if (error) return { success: false, error: error.message };
+      if (error) return failWith('gradebook', error, 'Something went wrong. Please try again.');
     } else {
       const { error } = await supabase
         .from('ces_attendance_records')
@@ -432,7 +446,7 @@ export async function overrideStudentAttendanceAction(
           session_date: new Date().toISOString().split('T')[0],
         });
 
-      if (error) return { success: false, error: error.message };
+      if (error) return failWith('gradebook', error, 'Something went wrong. Please try again.');
     }
 
     return { success: true };

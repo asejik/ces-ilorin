@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { failWith } from '@/lib/errors';
 import { requireStaffUser } from '@/lib/auth/guard';
 import {
   assessmentAccessSchema,
@@ -139,7 +140,7 @@ export async function getAvailableQuizzesAction(cohortType: string = 'Regular') 
       .order('created_at', { ascending: true });
 
     if (error) {
-      return { success: false, error: error.message };
+      return failWith('assessment', error, 'Something went wrong. Please try again.');
     }
 
     return {
@@ -149,8 +150,7 @@ export async function getAvailableQuizzesAction(cohortType: string = 'Regular') 
       quizzes: quizzes || [],
     };
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to retrieve assessment list';
-    return { success: false, error: msg };
+    return failWith('assessment', err, 'Could not load the assessment list. Please try again.');
   }
 }
 
@@ -291,9 +291,7 @@ export async function verifyAssessmentAccessAction(
       questions: sanitizedQuestions,
     };
   } catch (err: unknown) {
-    console.error('[Verify Assessment Error]:', err);
-    const msg = err instanceof Error ? err.message : 'An unexpected error occurred';
-    return { success: false, error: msg };
+    return failWith('assessment', err, 'Could not verify access. Please try again.');
   }
 }
 
@@ -322,7 +320,7 @@ export async function submitAssessmentAction(
     // 1. Validate student
     const { data: student, error: stuErr } = await supabase
       .from('ces_students')
-      .select('id, surname, first_name, matric_no')
+      .select('id, surname, first_name, matric_no, semester_id')
       .eq('matric_no', matricNo)
       .eq('is_deleted', false)
       .maybeSingle();
@@ -334,7 +332,7 @@ export async function submitAssessmentAction(
     // 2. Validate quiz
     const { data: quiz, error: qzErr } = await supabase
       .from('ces_quizzes')
-      .select('id, title, max_score, is_open, session_pin')
+      .select('id, title, max_score, is_open, session_pin, semester_id')
       .eq('id', quizId)
       .maybeSingle();
 
@@ -346,9 +344,13 @@ export async function submitAssessmentAction(
       return { success: false, error: 'This assessment session has been closed.' };
     }
 
-    // Re-verify session PIN to ensure candidate is participating in authorized in-class session
-    const expectedPin = (quiz.session_pin || '').trim().toUpperCase();
-    if (expectedPin && (!sessionPin || sessionPin !== expectedPin)) {
+    // A student may only submit to an assessment of their own cohort/semester.
+    if (quiz.semester_id !== student.semester_id) {
+      return { success: false, error: 'This assessment does not belong to your cohort.' };
+    }
+
+    // Re-verify the session PIN (always required: a quiz without a PIN cannot be submitted)
+    if (!codesMatch(quiz.session_pin, sessionPin)) {
       return { success: false, error: 'Valid active Session PIN is required to submit this assessment.' };
     }
 
@@ -404,7 +406,7 @@ export async function submitAssessmentAction(
       if (insErr.code === '23505') {
         return { success: false, error: 'You have already submitted this assessment.' };
       }
-      return { success: false, error: `Failed to record score: ${insErr.message}` };
+      return failWith('assessment', insErr, 'Failed to record score. Please try again.');
     }
 
     const fullName = `${student.first_name} ${student.surname}`;
@@ -419,9 +421,7 @@ export async function submitAssessmentAction(
       matricNo: student.matric_no,
     };
   } catch (err: unknown) {
-    console.error('[Submit Assessment Error]:', err);
-    const msg = err instanceof Error ? err.message : 'An unexpected error occurred during submission';
-    return { success: false, error: msg };
+    return failWith('assessment', err, 'Could not record your submission. Please try again.');
   }
 }
 
@@ -453,7 +453,7 @@ export async function getTeacherQuizzesAction(cohortType: string = 'Regular') {
       .order('created_at', { ascending: true });
 
     if (error) {
-      return { success: false, error: error.message };
+      return failWith('assessment', error, 'Something went wrong. Please try again.');
     }
 
     // Get submission count for each quiz
@@ -512,7 +512,7 @@ export async function updateQuizSessionAction(input: QuizSessionUpdateInput) {
       .eq('id', quizId);
 
     if (error) {
-      return { success: false, error: error.message };
+      return failWith('assessment', error, 'Something went wrong. Please try again.');
     }
 
     return { success: true };

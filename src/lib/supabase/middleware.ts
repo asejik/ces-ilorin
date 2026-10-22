@@ -1,5 +1,16 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
+
+/** True when the signed-in user has a row in ces_staff_profiles (checked with the server-only key). */
+async function isCesStaff(userId: string): Promise<boolean> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return false;
+  const admin = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data } = await admin.from('ces_staff_profiles').select('id').eq('id', userId).maybeSingle();
+  return !!data;
+}
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -75,10 +86,19 @@ export async function updateSession(request: NextRequest) {
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
+
+    // Signed in is not enough: the Auth project is shared, so require a CES staff profile.
+    if (!(await isCesStaff(user.id))) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/login';
+      loginUrl.search = '';
+      loginUrl.searchParams.set('error', 'not-staff');
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   // REDIRECT GUARD: Redirect logged-in staff away from /login to admin gradebook
-  if (pathname === '/login' && user) {
+  if (pathname === '/login' && user && (await isCesStaff(user.id))) {
     const targetUrl = request.nextUrl.clone();
     targetUrl.pathname = '/admin/gradebook';
     targetUrl.searchParams.delete('redirect');

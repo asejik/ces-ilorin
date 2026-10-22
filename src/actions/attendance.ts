@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { failWith } from '@/lib/errors';
 import { requireStaffUser } from '@/lib/auth/guard';
 import {
   ATTENDANCE_COURSE_NAMES,
@@ -157,7 +158,7 @@ export async function submitAttendanceCheckinAction(
           error: `Attendance for "${courseName}" has already been recorded for matric number "${student.matric_no}". Duplicate attendance check-ins are not permitted.`,
         };
       }
-      return { success: false, error: `Failed to record attendance: ${insErr.message}` };
+      return failWith('attendance', insErr, 'Failed to record attendance. Please try again.');
     }
 
     const fullName = `${student.first_name} ${student.surname}`;
@@ -172,9 +173,7 @@ export async function submitAttendanceCheckinAction(
       rating: deliveryRating,
     };
   } catch (err: unknown) {
-    console.error('[Attendance Checkin Error]:', err);
-    const msg = err instanceof Error ? err.message : 'An unexpected error occurred during check-in';
-    return { success: false, error: msg };
+    return failWith('attendance', err, 'Check-in could not be completed. Please try again.');
   }
 }
 
@@ -202,7 +201,7 @@ export async function getAttendanceFeedbackAction(
     const { data: records, error } = await query;
 
     if (error) {
-      return { success: false, error: error.message };
+      return failWith('attendance', error, 'Something went wrong. Please try again.');
     }
 
     const feedbacks: AttendanceFeedbackItem[] = (records || []).map((r) => {
@@ -286,7 +285,7 @@ export async function getClassCodesAction(
       .from('ces_class_codes')
       .select('id, course_name, code, is_open')
       .eq('semester_id', semester.id);
-    if (error) return { success: false, error: error.message };
+    if (error) return failWith('attendance', error, 'Something went wrong. Please try again.');
 
     const have = new Set((existing || []).map((r) => r.course_name));
     const missing = ATTENDANCE_COURSE_NAMES.filter((n) => !have.has(n));
@@ -304,7 +303,7 @@ export async function getClassCodesAction(
           { onConflict: 'semester_id,course_name', ignoreDuplicates: true }
         )
         .select('id, course_name, code, is_open');
-      if (insErr) return { success: false, error: insErr.message };
+      if (insErr) return failWith('attendance', insErr, 'Something went wrong. Please try again.');
       rows = [...rows, ...(inserted || [])];
     }
 
@@ -330,7 +329,7 @@ export async function setClassCodeOpenAction(
       .from('ces_class_codes')
       .update({ is_open: isOpen, updated_at: new Date().toISOString() })
       .eq('id', id);
-    return error ? { success: false, error: error.message } : { success: true };
+    return error ? failWith('attendance', error, 'Something went wrong. Please try again.') : { success: true };
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to update class code' };
   }
@@ -347,7 +346,7 @@ export async function regenerateClassCodeAction(
       .from('ces_class_codes')
       .update({ code: generateCode(), updated_at: new Date().toISOString() })
       .eq('id', id);
-    return error ? { success: false, error: error.message } : { success: true };
+    return error ? failWith('attendance', error, 'Something went wrong. Please try again.') : { success: true };
   } catch (err: unknown) {
     return { success: false, error: err instanceof Error ? err.message : 'Failed to regenerate class code' };
   }

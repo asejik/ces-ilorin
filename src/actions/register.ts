@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { failWith } from '@/lib/errors';
 import {
   studentRegistrationSchema,
   validatePassportFile,
@@ -232,7 +233,7 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
       if (insertErr.code === '42501') {
         return { success: false, error: 'Database permission denied. Ensure database role grants have been executed.' };
       }
-      return { success: false, error: `Database save error: ${insertErr.message}` };
+      return failWith('register', insertErr, 'Database save error. Please try again.');
     }
 
     // 7. Dispatch Automated Welcome Email
@@ -251,8 +252,6 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
       cohortType: validatedData.cohort_type,
     };
   } catch (err: unknown) {
-    console.error('[Registration Action Error]:', err);
-    const errorMsg = err instanceof Error ? err.message : 'An unexpected error occurred';
-    return { success: false, error: errorMsg };
+    return failWith('register', err, 'Registration could not be completed. Please try again.');
   }
 }

@@ -80,6 +80,15 @@
 - **Remaining (accepted)**: PostCSS <= 8.5.22 vendored inside Next 15 (XSS/source-map issues in CSS stringify). It only processes this project's own CSS at build time, never visitor input. Clearing it needs Next 16; revisit in a later upgrade. Dev-only: vitest/tinypool advisories (dev machines only).
 - Verified on the upgraded stack: tsc, 69 unit tests, lint (2 old hook warnings), production build, `test:rls` 17+/all pass; live: registration with photo (26J1005), staff login, class-code open + student check-in, quiz entry, answer and submit, broadsheet Excel export download; xlsx write/read round trip; nodemailer builds a message with PDF attachment. **Not tested**: real SMTP sending (dev mock in use), Next image optimiser.
 
+### 2026-10-24 - P04 batch 1 (medium/low, code only) - DONE and verified
+- **P04-07**: image proxy closed (`/_next/image?url=https://www.google.com/...` now 400). **P04-13**: `poweredByHeader` off; `unsafe-eval` only in dev; CSP `img-src` = self, data, blob, `*.supabase.co`. Staff broadsheet thumbnails still load (signed URLs) under the new CSP.
+- **P04-11**: login redirect only follows in-site paths (`src/lib/safe-redirect.ts`); a staff login with `?redirect=https://evil.example/phish` landed on `/admin/gradebook`.
+- **P04-08 (code part)**: middleware requires a `ces_staff_profiles` row (service-role lookup) for `/admin/*` and `/certificate/*`; a signed-in non-staff account is sent to `/login?error=not-staff` with a notice. **Owner to do**: turn off public sign-ups in Supabase Auth settings.
+- **P04-12**: quiz submission now always needs a matching PIN (constant time), and the quiz must belong to the student's semester. **P04-10 (part)**: score override reads the real `max_score` from the database instead of trusting the browser. These two are covered by type checks and review only; not exercised live.
+- **P04-14**: raw database errors are logged server-side and replaced by generic messages in 21 places plus the public catch blocks.
+- Checks: tsc clean, 73 unit tests, production build OK. Test accounts (staff + non-staff) deleted afterwards.
+- Pending: batch 2 (migration: audit log, score CHECK, `is_ces_staff` search_path) and batch 3 (role matrix, success-page cookie).
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.

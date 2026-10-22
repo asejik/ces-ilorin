@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GraduationCap, Lock, Mail, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { safeRedirectTarget } from '@/lib/safe-redirect';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +13,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const showNotStaffNotice = () => {
+    if (new URLSearchParams(window.location.search).get('error') === 'not-staff') {
+      setError('This account is not a CES staff member. Please sign in with a staff account.');
+    }
+  };
+
+  useEffect(showNotStaffNotice, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,9 +41,15 @@ export default function LoginPage() {
       }
 
       const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      const redirectTarget = params?.get('redirect') || '/admin/gradebook';
+      const redirectTarget = safeRedirectTarget(params?.get('redirect'));
       router.push(redirectTarget);
       router.refresh();
+      // If the server bounces a non-staff account back here, this page stays mounted:
+      // release the button and show why.
+      window.setTimeout(() => {
+        setLoading(false);
+        showNotStaffNotice();
+      }, 2500);
     } catch {
       setError('An unexpected error occurred. Please check your network connection.');
       setLoading(false);
