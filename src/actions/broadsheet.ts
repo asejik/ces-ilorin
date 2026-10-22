@@ -539,13 +539,14 @@ export async function batchIssueCertificatesAction(
 }
 
 /**
- * Public & Admin Action: Fetches certificate details by Matriculation Number or Certificate Number
- * for instant printing, student self-service download, or verification.
+ * Staff Action: Fetches certificate details by Matriculation Number or Certificate Number
+ * for printing. Staff only: students do not view results or certificates themselves.
  */
 export async function getCertificateByMatricAction(
   identifier: string
 ): Promise<{ success: boolean; certificate?: CertificateDetails; error?: string }> {
   try {
+    await requireStaffUser();
     const supabase = createAdminClient();
     const cleanId = decodeURIComponent(identifier).trim().toUpperCase();
 

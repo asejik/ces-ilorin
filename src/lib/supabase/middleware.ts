@@ -67,8 +67,8 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // ROUTE GUARD: Protect all /admin/* routes from unauthenticated access
-  if (pathname.startsWith('/admin')) {
+  // ROUTE GUARD: Protect all /admin/* and /certificate/* routes from unauthenticated access
+  if (pathname.startsWith('/admin') || pathname.startsWith('/certificate')) {
     if (!user) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/login';
