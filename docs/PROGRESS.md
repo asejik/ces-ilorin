@@ -44,12 +44,13 @@
 - `/assessment` alias route deleted; replaced by a permanent (308) redirect to `/assess` in `next.config.mjs`; removed from `robots.ts`.
 - Project moved from Google Drive to `D:devces`; remote switched to HTTPS; hourly backup task copies it to Drive (`D:dev_toolsackup-ces.ps1`).
 - Baseline corrected: unit tests are 64 (not 62).
+- Large pages split into `_components/` + a state hook each (no behaviour change): `register` 689 -> 70 lines, `admin/gradebook` 745 -> 53, `admin/broadsheet` 819 -> 52, `assess` 949 -> 99. Shared `src/lib/quiz-columns.ts`. Verified with typecheck, lint, 64 tests, build, byte-level SSR HTML diff of `/register` and `/assess` (only difference: the PIN placeholder `SALV26` -> `AB12CD`), and in-browser behaviour checks of both. Admin pages (gradebook, broadsheet) are behind login and were verified by typecheck/lint/build only; a logged-in click-through is still recommended.
 
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
 - Matric sequence uses a global `count + 1` (racy, not per-month, violates atomic-generation rule).
-- Large page files (assess 949, broadsheet 819, gradebook 745, register 689 lines) still to be split.
+- Gradebook attendance toggle writes to a hardcoded Regular-cohort semester id (`use-gradebook.ts`), so Sunday Cohort toggles hit the wrong semester.
 - Old reports in `docs/audits/` are superseded; re-run reports will be added as new dated files.
 
 ---
