@@ -46,12 +46,21 @@
 - Baseline corrected: unit tests are 64 (not 62).
 - Large pages split into `_components/` + a state hook each (no behaviour change): `register` 689 -> 70 lines, `admin/gradebook` 745 -> 53, `admin/broadsheet` 819 -> 52, `assess` 949 -> 99. Shared `src/lib/quiz-columns.ts`. Verified with typecheck, lint, 64 tests, build, byte-level SSR HTML diff of `/register` and `/assess` (only difference: the PIN placeholder `SALV26` -> `AB12CD`), and in-browser behaviour checks of both. Admin pages (gradebook, broadsheet) are behind login and were verified by typecheck/lint/build only; a logged-in click-through is still recommended.
 
+### 2026-10-22 - Independent audit re-run (reports in docs/audits/*_2026-10-22.md)
+- **Verdict: NOT READY for launch. P05 grade F** (rule: any open CRITICAL). The re-run executed real checks against the code, build, tests and the live Supabase project; the 2026-09-19 reports are marked SUPERSEDED.
+- **P04 Security**: 2 CRITICAL (quiz PINs readable with the public key; anonymous inserts into students/attendance), 5 HIGH, several MEDIUM/LOW. The admin-route protection from the old audit was verified as fixed.
+- **P03 Readiness**: HIGH items: matric generation (count + 1: race and breaks after a delete), hardcoded semester id in gradebook, tests (E2E 0/4 pass; load test does not test the requirement), dev and prod share one database holding test data, possible 1,000-row API cap, launch essentials missing.
+- **P02 Egress**: HIGH - passport photos stored full-size (859 KB sample shown at 32 px); projections included.
+- **P05**: 22 unlabeled form inputs, missing planned features (Student 360, semester management, password reset), no error states on staff screens.
+- **P08 SEO**: og:image missing on /register, robots/sitemap contradictions, llms.txt states wrong facts.
+- **No fixes have been applied.** Waiting for the owner to approve specific finding IDs; each fix then goes through the P07 protocol.
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
 - Matric sequence uses a global `count + 1` (racy, not per-month, violates atomic-generation rule).
 - Gradebook attendance toggle writes to a hardcoded Regular-cohort semester id (`use-gradebook.ts`), so Sunday Cohort toggles hit the wrong semester.
-- Old reports in `docs/audits/` are superseded; re-run reports will be added as new dated files.
+- Old reports in `docs/audits/` (dated 2026-09-19) are marked SUPERSEDED; use the 2026-10-22 reports.
 
 ---
 
