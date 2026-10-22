@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireStaffUser } from '@/lib/auth/guard';
+import { signPassportPaths } from '@/lib/passport-photos';
 import {
   calculateCumulativeScore,
   determineGraduationStatus,
@@ -162,6 +163,11 @@ export async function getBroadsheetAction(
     let meritCount = 0;
     let passCount = 0;
 
+    const signedPhotos = await signPassportPaths(
+      supabase,
+      (students || []).map((s) => s.passport_url)
+    );
+
     const rows: StudentBroadsheetRow[] = (students || []).map((stu) => {
       const stuScores = studentAssessmentsMap.get(stu.id);
       const stuAtt = studentAttendanceMap.get(stu.id);
@@ -249,7 +255,7 @@ export async function getBroadsheetAction(
         studentId: stu.id,
         matricNo: stu.matric_no,
         fullName: `${stu.first_name} ${stu.surname}`,
-        passportUrl: stu.passport_url,
+        passportUrl: stu.passport_url ? signedPhotos.get(stu.passport_url) ?? null : null,
         cohortType: stu.cohort_type,
         status: stu.status,
         quizzes: quizzesObj,
@@ -316,7 +322,7 @@ export async function issueCertificateAction(
     // 1. Fetch student details
     const { data: student, error: stuErr } = await supabase
       .from('ces_students')
-      .select('id, matric_no, surname, first_name, passport_url, cohort_type, semester_id')
+      .select('id, matric_no, surname, first_name, cohort_type, semester_id')
       .eq('id', studentId)
       .maybeSingle();
 
@@ -347,7 +353,7 @@ export async function issueCertificateAction(
           studentId: student.id,
           studentName: `${student.first_name} ${student.surname}`,
           matricNo: student.matric_no,
-          passportUrl: student.passport_url,
+          passportUrl: null,
           cohortName: semester?.name ?? `${student.cohort_type} — 2026`,
           cohortType: student.cohort_type,
           cumulativeTotal: Number(existingCert.cumulative_total),
@@ -457,7 +463,7 @@ export async function issueCertificateAction(
         studentId: student.id,
         studentName: `${student.first_name} ${student.surname}`,
         matricNo: student.matric_no,
-        passportUrl: student.passport_url,
+        passportUrl: null,
         cohortName: semester?.name ?? `${student.cohort_type} — 2026`,
         cohortType: student.cohort_type,
         cumulativeTotal: Number(newCert.cumulative_total),
@@ -546,7 +552,7 @@ export async function getCertificateByMatricAction(
     // 1. Try finding student by matriculation number
     const { data: student } = await supabase
       .from('ces_students')
-      .select('id, matric_no, surname, first_name, passport_url, cohort_type, semester_id')
+      .select('id, matric_no, surname, first_name, cohort_type, semester_id')
       .ilike('matric_no', cleanId)
       .maybeSingle();
 
@@ -576,7 +582,7 @@ export async function getCertificateByMatricAction(
     if (!resolvedStudent) {
       const { data: s } = await supabase
         .from('ces_students')
-        .select('id, matric_no, surname, first_name, passport_url, cohort_type, semester_id')
+        .select('id, matric_no, surname, first_name, cohort_type, semester_id')
         .eq('id', cert.student_id)
         .maybeSingle();
       resolvedStudent = s;
@@ -600,7 +606,7 @@ export async function getCertificateByMatricAction(
         studentId: resolvedStudent.id,
         studentName: `${resolvedStudent.first_name} ${resolvedStudent.surname}`,
         matricNo: resolvedStudent.matric_no,
-        passportUrl: resolvedStudent.passport_url,
+        passportUrl: null,
         cohortName: semester?.name ?? `${resolvedStudent.cohort_type} — 2026`,
         cohortType: resolvedStudent.cohort_type,
         cumulativeTotal: Number(cert.cumulative_total),

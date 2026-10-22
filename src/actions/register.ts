@@ -6,7 +6,9 @@ import {
   validatePassportFile,
   validateImageBuffer,
 } from '@/lib/validation/registration';
+import { randomUUID } from 'crypto';
 import { generateMatricNumber } from '@/lib/academic';
+import { PASSPORT_BUCKET } from '@/lib/passport-photos';
 import { sendWelcomeEmail } from '@/lib/email';
 
 export interface RegisterActionResult {
@@ -145,21 +147,18 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
         }
 
         const safeExt = bufferValidation.ext;
-        const filePath = `passports/${matricNo.replace(/\//g, '_')}.${safeExt}`;
+        // Private bucket + unguessable name: the stored value is a storage path, not a URL.
+        const filePath = `passports/${randomUUID()}.${safeExt}`;
 
         const { error: uploadErr } = await supabase.storage
-          .from('ces-assets')
+          .from(PASSPORT_BUCKET)
           .upload(filePath, buffer, {
             contentType: passportFile.type,
-            upsert: true,
-            cacheControl: '31536000',
+            upsert: false,
           });
 
         if (!uploadErr) {
-          const { data: publicUrlData } = supabase.storage
-            .from('ces-assets')
-            .getPublicUrl(filePath);
-          passportUrl = publicUrlData?.publicUrl || null;
+          passportUrl = filePath;
         }
       } catch (uploadErr) {
         console.warn('[Storage] Photo upload failed, continuing with registration:', uploadErr);

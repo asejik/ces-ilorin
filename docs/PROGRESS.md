@@ -62,6 +62,12 @@
 - Also confirmed live: P03-02 (Sunday attendance toggles write to the Regular semester).
 - Next suggested: P03-01/P03-02 (matric race, wrong semester), P04-04 (private passport photos).
 
+### 2026-10-23 - Fixes: P03-01, P03-02, P04-04 - DONE and verified
+- **P03-01 matric numbers**: migration `20261023_p03_matric_counter.sql` (+ rollback) adds `ces_matric_counters` and `ces_next_matric_seq(year, month)`. Sequence restarts each month, shared by both cohorts, never reused. Verified live: 20 parallel calls returned 1-20 with no duplicates; anon key cannot call it (42501); a real registration received `CES/ILR/26J1004` after `26J1003`.
+- **P03-02 wrong semester**: removed the hardcoded semester id; `overrideStudentAttendanceAction` now reads the semester from the student's own record.
+- **P04-04 passport photos**: new uploads go to private bucket `ces-private` under `passports/<uuid>.<ext>`; `passport_url` now stores the storage path. Staff broadsheet gets 1-hour signed URLs (`src/lib/passport-photos.ts`); the public certificate lookup returns no photo. `scripts/migrate-passports.mjs` moved the 2 existing test photos and removed the public copies. Verified: public URL returns 400, signed URL returns 200. Not yet checked in a logged-in browser (broadsheet thumbnail).
+- Checks: tsc clean, 64/64 unit tests, production build OK.
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
