@@ -5,7 +5,7 @@
 -- CLASSIFICATION : PERMISSIONS CHANGE. No rows are changed or deleted.
 --                  Reversible with 20261022_p04_lockdown_anon_access_rollback.sql
 -- SCOPE          : ONLY the eight ces_* tables. This Supabase project is SHARED with
---                  another church's application, so this file deliberately does NOT
+--                  another application of the same church (sermons), so this file deliberately does NOT
 --                  touch other tables, schema-wide grants or ALTER DEFAULT PRIVILEGES.
 -- WHY IT IS SAFE : the CES app reads/writes ces_* data only through server code that
 --                  uses the service_role key (which bypasses RLS and keeps its grants).

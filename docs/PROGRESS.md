@@ -55,6 +55,13 @@
 - **P08 SEO**: og:image missing on /register, robots/sitemap contradictions, llms.txt states wrong facts.
 - **No fixes have been applied.** Waiting for the owner to approve specific finding IDs; each fix then goes through the P07 protocol.
 
+### 2026-10-22 - Fix: P04-01 and P04-02 (database lockdown) - DONE and verified
+- Applied `supabase/migrations/20261022_p04_lockdown_anon_access.sql` (owner ran it in the Supabase SQL editor; scoped to the eight `ces_*` tables because the project is shared with the church's sermons app). Rollback script alongside.
+- New regression check `npm run test:rls` (`scripts/verify-rls.mjs`): 17/17 pass (5 failed before). Public key can no longer read PINs or write to students/attendance.
+- Verified the app still works end to end (registration, quiz entry and submit, attendance and duplicate block, staff login, gradebook override, broadsheet and certificate preview, quiz PIN manager, attendance analytics). Temporary staff account was created for the test and deleted afterwards.
+- Also confirmed live: P03-02 (Sunday attendance toggles write to the Regular semester).
+- Next suggested: P03-01/P03-02 (matric race, wrong semester), P04-04 (private passport photos).
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
