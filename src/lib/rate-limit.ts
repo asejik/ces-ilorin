@@ -2,9 +2,9 @@ import { headers } from 'next/headers';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /** Best-effort client IP (Vercel sets x-forwarded-for). Falls back to a shared bucket. */
-export function getClientIp(): string {
+export async function getClientIp(): Promise<string> {
   try {
-    const h = headers();
+    const h = await headers();
     const forwarded = h.get('x-forwarded-for');
     if (forwarded) return forwarded.split(',')[0].trim();
     return h.get('x-real-ip')?.trim() || 'unknown';

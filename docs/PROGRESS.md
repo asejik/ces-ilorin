@@ -74,6 +74,12 @@
 - **P04-05 rate limiting**: `ces_rate_limits` + `ces_rate_limit_hit()`; limits on registration (20/h/IP), quiz access (12/10min/matric, 60/10min/IP), quiz submit, attendance (10/10min/matric, 40/10min/IP). Verified: 15 parallel hits at limit 10 gave 10 allowed / 5 blocked; 10 rapid wrong check-ins were throttled after the limit. Quiz access: wrong PIN and unknown matric give one identical message; correct PIN still enters the room. Limiter fails open if the database call errors.
 - Not done: Cloudflare Turnstile on /register (needs account keys). `npm run test:rls` covers the new tables. Unit tests: 69.
 
+### 2026-10-24 - Fix: P04-06 dependency upgrades - DONE and verified
+- `npm audit --omit=dev`: **5 vulnerabilities (1 critical, 4 high) -> 2 (1 moderate, 1 high)**. Upgraded: next 14.2.35 -> **15.5.28** (patched backport; React stays 18.3.1), nodemailer 6.10.1 -> **10.2.1**, xlsx -> SheetJS **0.20.3** (official tarball, integrity-pinned in the lockfile), supabase-js 2.118, playwright, source-map-js (audit fix).
+- Code changes required by Next 15: `cookies()`/`headers()` are async (`supabase/server.ts`, `auth/guard.ts`, `rate-limit.ts`), `/register/success` reads async `searchParams`. Note: without the `await` in `getClientIp` every visitor would have silently shared one rate-limit bucket; verified the stored keys now contain the real IP.
+- **Remaining (accepted)**: PostCSS <= 8.5.22 vendored inside Next 15 (XSS/source-map issues in CSS stringify). It only processes this project's own CSS at build time, never visitor input. Clearing it needs Next 16; revisit in a later upgrade. Dev-only: vitest/tinypool advisories (dev machines only).
+- Verified on the upgraded stack: tsc, 69 unit tests, lint (2 old hook warnings), production build, `test:rls` 17+/all pass; live: registration with photo (26J1005), staff login, class-code open + student check-in, quiz entry, answer and submit, broadsheet Excel export download; xlsx write/read round trip; nodemailer builds a message with PDF attachment. **Not tested**: real SMTP sending (dev mock in use), Next image optimiser.
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.

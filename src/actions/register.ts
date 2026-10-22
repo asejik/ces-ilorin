@@ -71,7 +71,7 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
     const supabase = createAdminClient();
 
     // Throttle mass sign-ups (welcome emails go out from the church address)
-    if (!(await withinRateLimit(supabase, `register:ip:${getClientIp()}`, 20, 3600))) {
+    if (!(await withinRateLimit(supabase, `register:ip:${await getClientIp()}`, 20, 3600))) {
       return { success: false, error: TOO_MANY_ATTEMPTS };
     }
 

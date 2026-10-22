@@ -15,7 +15,7 @@ export interface StaffUser {
 export async function requireStaffUser(
   allowedRoles?: Array<'super_admin' | 'ces_admin' | 'ces_teacher'>
 ): Promise<StaffUser> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
     error: authError,

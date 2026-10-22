@@ -173,7 +173,7 @@ export async function verifyAssessmentAccessAction(
     const supabase = createAdminClient();
 
     // 0. Throttle guessing: per network address and per matric number
-    const ip = getClientIp();
+    const ip = await getClientIp();
     const allowed =
       (await withinRateLimit(supabase, `assess:ip:${ip}`, 60, 600)) &&
       (await withinRateLimit(supabase, `assess:m:${matricNo}`, 12, 600));
@@ -315,7 +315,7 @@ export async function submitAssessmentAction(
     const { matricNo, quizId, answers, sessionPin } = parseResult.data;
     const supabase = createAdminClient();
 
-    if (!(await withinRateLimit(supabase, `submit:ip:${getClientIp()}`, 60, 600))) {
+    if (!(await withinRateLimit(supabase, `submit:ip:${await getClientIp()}`, 60, 600))) {
       return { success: false, error: TOO_MANY_ATTEMPTS };
     }
 

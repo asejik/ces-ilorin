@@ -18,17 +18,18 @@ export const metadata: Metadata = {
 };
 
 interface SuccessPageProps {
-  searchParams: {
+  searchParams: Promise<{
     matricNo?: string;
     name?: string;
     cohort?: string;
-  };
+  }>;
 }
 
-export default function RegisterSuccessPage({ searchParams }: SuccessPageProps) {
-  const matricNo = searchParams.matricNo || 'CES/ILR/26XXXX';
-  const studentName = searchParams.name || 'Student';
-  const cohortType = searchParams.cohort || 'Regular';
+export default async function RegisterSuccessPage({ searchParams }: SuccessPageProps) {
+  const query = await searchParams;
+  const matricNo = query.matricNo || 'CES/ILR/26XXXX';
+  const studentName = query.name || 'Student';
+  const cohortType = query.cohort || 'Regular';
   const isSunday = cohortType === 'Sunday Cohort';
 
   return (

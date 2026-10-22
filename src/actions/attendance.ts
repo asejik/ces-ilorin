@@ -72,7 +72,7 @@ export async function submitAttendanceCheckinAction(
     const supabase = createAdminClient();
 
     // 0. Throttle guessing: per network address and per matric number
-    const ip = getClientIp();
+    const ip = await getClientIp();
     const allowed =
       (await withinRateLimit(supabase, `att:ip:${ip}`, 40, 600)) &&
       (await withinRateLimit(supabase, `att:m:${matricNo}`, 10, 600));
