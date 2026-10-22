@@ -48,6 +48,10 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    // Legacy alias: keep old /assessment links working with a permanent redirect.
+    return [{ source: '/assessment', destination: '/assess', permanent: true }];
+  },
   async headers() {
     return [
       {

@@ -2,9 +2,9 @@
 
 ## Status Summary
 - **Current Phase**: P07 (Build Milestones)
-- **Active Task**: Milestone M6 Hardening & Test Suite Completed; Vercel Deployment Held for Audits
+- **Active Task**: Post-build remediation (2026-10-22): privacy cleanup done; independent re-run of audits P02-P05/P08 pending (earlier audit reports are untrusted/superseded)
 - **Rigor Level**: STRICT
-- **Working Tree**: Clean & Verified (Typecheck: 0 errors, Vitest: 62/62 Pass, Health API: 200 OK)
+- **Working Tree**: Clean. Typecheck 0 errors, Vitest 64/64, `next build` OK, lint warnings only (2026-10-22). Project now lives at `D:devces`.
 
 ---
 
@@ -26,6 +26,31 @@
 - [x] **Milestones M1–M5**: 100% Complete & Unit Tested (62/62)
 - [x] **Milestone M6 Hardening**: Security headers, health check, abuse prevention, E2E specs, load test runner
 - [ ] **Milestone M6 Production Deployment**: Awaiting user audit completion before deploying to Vercel
+
+---
+
+## Post-Audit Changes & Remediation Log
+
+### Fixes made after the original audits (2026-09-19 to 2026-10-xx, from git history)
+- Assessment: persist active test session across browser refresh; cohort-mismatch validation and notice; removed flash of login gate on refresh; dropdown latency fix.
+- Attendance: class date picker, full curriculum course options, strictly blocked duplicate check-ins with an informative error.
+- Registration: submit button disabled until compulsory fields and NDPA consent are complete.
+- SEO: OG cards, sitemap/robots, JSON-LD (P08), spiritual-oversight name fix in llms.txt.
+
+### 2026-10-22 - Privacy & repo hygiene (repo is PUBLIC)
+- Answer keys, question text and default session PINs removed from source and rewritten out of git history (force-pushed). `curriculum.ts` is now a catalogue only; questions live in `ces_quiz_questions`. New quizzes are created closed with a random server-generated PIN. All 18 live PINs were rotated.
+- Client xlsx/docx, duplicate `documents/` folder, admin email and sender address removed from repo and history; `private/` and data-file extensions are gitignored.
+- Course manual moved to private bucket `ces-private` and attached to the welcome email; public link removed.
+- `/assessment` alias route deleted; replaced by a permanent (308) redirect to `/assess` in `next.config.mjs`; removed from `robots.ts`.
+- Project moved from Google Drive to `D:devces`; remote switched to HTTPS; hourly backup task copies it to Drive (`D:dev_toolsackup-ces.ps1`).
+- Baseline corrected: unit tests are 64 (not 62).
+
+### Known issues found during remediation (to be covered by the re-run audits)
+- `ces-assets` bucket is public and holds passport photos at guessable paths.
+- RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
+- Matric sequence uses a global `count + 1` (racy, not per-month, violates atomic-generation rule).
+- Large page files (assess 949, broadsheet 819, gradebook 745, register 689 lines) still to be split.
+- Old reports in `docs/audits/` are superseded; re-run reports will be added as new dated files.
 
 ---
 
