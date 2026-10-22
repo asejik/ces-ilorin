@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:load": "node load-test/load-test.mjs"
+    "test:load": "node load-test/load-test.mjs",
+    "test:rls": "node scripts/verify-rls.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.1",
