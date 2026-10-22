@@ -1,11 +1,11 @@
 import nodemailer from 'nodemailer';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 interface SendWelcomeEmailParams {
   to: string;
   studentName: string;
   matricNo: string;
   cohortType: string;
-  manualUrl?: string;
 }
 
 /**
@@ -42,22 +42,41 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
+const MANUAL_BUCKET = 'ces-private';
+const MANUAL_PATH = 'manuals/course-manual.pdf';
+
+/**
+ * Loads the course manual from the PRIVATE storage bucket so it can be attached.
+ * The manual is never served from a public URL. Returns null if not uploaded yet.
+ */
+async function loadManualAttachment(): Promise<{ filename: string; content: Buffer; contentType: string } | null> {
+  try {
+    const { data, error } = await createAdminClient().storage.from(MANUAL_BUCKET).download(MANUAL_PATH);
+    if (error || !data) return null;
+    return {
+      filename: 'CES-Course-Manual.pdf',
+      content: Buffer.from(await data.arrayBuffer()),
+      contentType: 'application/pdf',
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Dispatches an automated welcome email to admitted students
  */
 export async function sendWelcomeEmail(
   params: SendWelcomeEmailParams
 ): Promise<{ success: boolean; error?: string }> {
-  const { to, studentName, matricNo, cohortType, manualUrl } = params;
+  const { to, studentName, matricNo, cohortType } = params;
 
   const safeName = escapeHtml(studentName);
   const safeMatric = escapeHtml(matricNo);
   const safeCohort = escapeHtml(cohortType);
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ces.citizensoflightchurch.org';
-  const effectiveManualUrl = manualUrl || `${appUrl}/manual.pdf`;
-  const fromEmail =
-    process.env.EMAIL_FROM || 'Citizens Elementary School <admissions@example.org>';
+  const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const manual = await loadManualAttachment();
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -122,16 +141,11 @@ export async function sendWelcomeEmail(
                 <li style="margin-bottom: 8px;"><strong>Online Quizzes:</strong> At the conclusion of each course, your teacher will provide a Session PIN to take your quiz on the school portal.</li>
               </ul>
 
-              <!-- Action Button -->
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 24px;">
-                <tr>
-                  <td align="center">
-                    <a href="${effectiveManualUrl}" target="_blank" style="display: inline-block; background-color: #0B0F19; color: #FFFFFF; font-size: 14px; font-weight: 600; padding: 12px 28px; text-decoration: none; border-radius: 6px; box-shadow: 0 1px 2px rgba(11, 15, 25, 0.1);">
-                      Download Instructional Course Manual
-                    </a>
-                  </td>
-                </tr>
-              </table>
+              ${
+                manual
+                  ? '<p style="font-size: 14px; line-height: 22px; color: #475467; margin-bottom: 24px;"><strong>Your Instructional Course Manual is attached to this email.</strong> Please save it for reference.</p>'
+                  : ''
+              }
 
               <p style="font-size: 13px; color: #98A2B3; line-height: 20px; text-align: center; margin-bottom: 0;">
                 If you have any questions or enquiries, please contact the CES Administrative Desk at the church center.
@@ -165,6 +179,7 @@ export async function sendWelcomeEmail(
   try {
     await transporter.sendMail({
       from: fromEmail,
+      attachments: manual ? [manual] : undefined,
       to,
       subject: `Welcome to Citizens Elementary School — Your Matric No: ${matricNo}`,
       html: htmlContent,

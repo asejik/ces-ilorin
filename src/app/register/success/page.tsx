@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { 
   CheckCircle2, 
-  Download, 
   BookOpen, 
   Calendar, 
   ShieldCheck, 
@@ -99,14 +98,6 @@ export default function RegisterSuccessPage({ searchParams }: SuccessPageProps) 
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <a
-              href="/manual.pdf"
-              target="_blank"
-              className="flex-1 h-11 rounded-lg bg-ink-950 text-white text-xs font-semibold hover:bg-ink-800 transition-colors flex items-center justify-center gap-2 shadow-sm"
-            >
-              <Download className="w-4 h-4 text-solar-400" />
-              Download Course Manual
-            </a>
             <Link
               href="/"
               className="h-11 px-5 rounded-lg border border-ink-300 bg-surface hover:bg-surface-subtle text-xs font-semibold text-ink-950 transition-colors flex items-center justify-center gap-2 shadow-xs"
