@@ -1,4 +1,8 @@
-# CLAUDE.md — Citizens Elementary School (CES) Web Platform
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+# Citizens Elementary School (CES) Web Platform
 
 ## Project Overview
 - **Name**: Citizens Elementary School (CES) Discipleship Training Portal
@@ -7,12 +11,12 @@
 - **Rigor Level**: **STRICT** (Full automated unit tests, Playwright E2E suites, 100-user concurrent load test, strict type checking)
 
 ## Tech Stack
-- **Framework**: Next.js 14/15 (App Router, TypeScript)
+- **Framework**: Next.js 14 (App Router, TypeScript; `@/*` → `src/*`)
 - **Styling**: Tailwind CSS + custom tokens (distinct Sunday Cohort visual styling)
 - **Database & Auth**: Supabase (Shared project, isolated namespace `ces_*`, `ces-assets` storage bucket, Row Level Security)
 - **Email**: Nodemailer (Gmail App Password) or Brevo API
 - **Reporting & Export**: SheetJS (`xlsx`) for Excel reports; HTML/Canvas/SVG for Certificate generation
-- **Testing**: Vitest (Unit tests), Playwright (E2E smoke tests), k6 (Concurrent load testing)
+- **Testing**: Vitest (Unit tests), Playwright (E2E smoke tests), a Node script `load-test/load-test.mjs` (100 concurrent virtual users; no k6 installed)
 
 ## Core Architectural Rules
 1. **Never Leak Secrets**:
@@ -41,12 +45,23 @@
 5. **Sunday Cohort Visual Distinction**:
    - Sunday Cohort semesters and students must have distinct visual badges/color schemes across all tables, lists, and dashboards.
 
-## Standard Commands (Once Scaffolded)
+## Standard Commands
 - `npm run dev`: Start local development server on port 3000
 - `npm run build`: Production build with strict TypeScript and ESLint checks
-- `npm run test`: Run Vitest unit tests (scoring, matric generation, graduation clearance)
-- `npm run test:e2e`: Run Playwright end-to-end user journey tests
+- `npm run test`: Run Vitest unit tests (`vitest run`, files in `src/**/__tests__/`)
+- `npx vitest run src/lib/__tests__/academic.test.ts`: Run a single test file (add `-t "name"` for one case); `npm run test:watch` for watch mode
+- `npm run test:e2e`: Playwright journeys in `e2e/` (single worker, Chromium, expects the app on `http://localhost:3000` — start `npm run dev` first); single spec: `npx playwright test e2e/journey2-quiz.spec.ts`
+- `npm run test:load`: 100-user load test; target via arg or `LOAD_TEST_TARGET`, tune with `CONCURRENCY` / `DURATION` env vars
 - `npm run lint`: Run ESLint checks
+- Env: copy `.env.example` to `.env.local` (Supabase URL/anon/service-role keys, SMTP settings, `NEXT_PUBLIC_APP_URL`)
+
+## Architecture Notes
+- **Route map** (`src/app/`): public `/register` (+`/success`), `/assess` (student quiz; `/assessment` just redirects to it), `/attendance`, `/certificate/[matricNo]`; staff-only `/admin/{attendance,broadsheet,gradebook,quizzes}` behind `/login`; `/api/health`.
+- **Auth is two-layered**: `src/middleware.ts` → `lib/supabase/middleware.ts#updateSession` redirects unauthenticated `/admin/*` to `/login?redirect=...`; every admin Server Action must additionally call `requireStaffUser(roles?)` from `lib/auth/guard.ts` (checks `ces_staff_profiles`; roles `super_admin | ces_admin | ces_teacher`). Never rely on middleware alone.
+- **Supabase clients** (`src/lib/supabase/`): `client.ts` (browser, anon), `server.ts` (cookie-bound SSR), `admin.ts` (service role, bypasses RLS — server-only; used for registration, scoring, staff lookup).
+- **Data flow**: pages call Server Actions in `src/actions/` (`register`, `assessment`, `attendance`, `gradebook`, `broadsheet`); inputs validated by Zod schemas in `src/lib/validation/`; scoring/status/honours/matric logic lives only in `src/lib/academic.ts`; `src/lib/curriculum.ts` is the 8-course quiz + final-exam definition/seed source (contains answer keys — server-only); `excel.ts` (SheetJS), `certificate.ts`, `email.ts` are server helpers. DB row types are in `src/types/`.
+- **Database**: tables `ces_staff_profiles, ces_semesters, ces_students, ces_quizzes, ces_quiz_questions, ces_student_assessments, ces_attendance_records, ces_certificates`. Schema is in `supabase/migrations/` (each destructive migration has a `rollback` counterpart; attendance has a composite unique index on `(student_id, course_name, semester_id)`). Migrations are applied manually to the shared Supabase project, so follow the Database Safety rule below.
+- **Progress log**: `docs/PROGRESS.md` (update each task) and `docs/audits/` hold the history of audits P02–P08; design direction is in `docs/DESIGN.md`.
 
 ## Code Conventions
 - Use TypeScript strictly; `any` is forbidden.
