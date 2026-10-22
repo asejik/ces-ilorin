@@ -68,6 +68,12 @@
 - **P04-04 passport photos**: new uploads go to private bucket `ces-private` under `passports/<uuid>.<ext>`; `passport_url` now stores the storage path. Staff broadsheet gets 1-hour signed URLs (`src/lib/passport-photos.ts`); the public certificate lookup returns no photo. `scripts/migrate-passports.mjs` moved the 2 existing test photos and removed the public copies. Verified: public URL returns 400, signed URL returns 200. Not yet checked in a logged-in browser (broadsheet thumbnail).
 - Checks: tsc clean, 64/64 unit tests, production build OK.
 
+### 2026-10-24 - Fixes: P04-03, P04-05, P04-21 - DONE and verified
+- **P04-21**: `/certificate/*` and `getCertificateByMatricAction` are staff-only (unauthenticated request redirects to /login).
+- **P04-03 class codes**: migration `20261024_p04_class_codes_and_rate_limits.sql` (+ rollback) adds `ces_class_codes`. Teacher panel on `/admin/attendance` opens/closes classes and shows/regenerates codes; `/attendance` requires the code. Verified live: closed class, wrong code and unknown matric all give the same refusal; correct code (any case) records attendance.
+- **P04-05 rate limiting**: `ces_rate_limits` + `ces_rate_limit_hit()`; limits on registration (20/h/IP), quiz access (12/10min/matric, 60/10min/IP), quiz submit, attendance (10/10min/matric, 40/10min/IP). Verified: 15 parallel hits at limit 10 gave 10 allowed / 5 blocked; 10 rapid wrong check-ins were throttled after the limit. Quiz access: wrong PIN and unknown matric give one identical message; correct PIN still enters the room. Limiter fails open if the database call errors.
+- Not done: Cloudflare Turnstile on /register (needs account keys). `npm run test:rls` covers the new tables. Unit tests: 69.
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
