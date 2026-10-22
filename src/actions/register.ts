@@ -9,6 +9,7 @@ import {
 import { randomUUID } from 'crypto';
 import { generateMatricNumber } from '@/lib/academic';
 import { PASSPORT_BUCKET } from '@/lib/passport-photos';
+import { getClientIp, TOO_MANY_ATTEMPTS, withinRateLimit } from '@/lib/rate-limit';
 import { sendWelcomeEmail } from '@/lib/email';
 
 export interface RegisterActionResult {
@@ -68,6 +69,11 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
 
     // Use administrative client for server-side registration operations
     const supabase = createAdminClient();
+
+    // Throttle mass sign-ups (welcome emails go out from the church address)
+    if (!(await withinRateLimit(supabase, `register:ip:${getClientIp()}`, 20, 3600))) {
+      return { success: false, error: TOO_MANY_ATTEMPTS };
+    }
 
     // 3. Resolve or Create Active Semester for this Cohort Type
     const currentYear = new Date().getFullYear();

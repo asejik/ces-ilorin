@@ -71,6 +71,12 @@ export const attendanceCheckinSchema = z.object({
     .optional()
     .nullable()
     .transform((val) => (val ? val.trim() : undefined)),
+  classCode: z
+    .string()
+    .trim()
+    .min(1, 'Please enter the class code given by your teacher')
+    .max(20, 'Class code is too long')
+    .transform((val) => val.toUpperCase()),
   deliveryRating: z
     .number()
     .int('Rating must be an integer')

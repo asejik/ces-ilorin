@@ -23,6 +23,7 @@ import {
 export default function StudentAttendancePage() {
   const todayIso = new Date().toISOString().split('T')[0];
   const [matricNo, setMatricNo] = useState('');
+  const [classCode, setClassCode] = useState('');
   const [courseName, setCourseName] = useState<string>(ATTENDANCE_COURSE_NAMES[0]);
   const [sessionDate, setSessionDate] = useState<string>(todayIso);
   const [rating, setRating] = useState<number>(5);
@@ -58,6 +59,11 @@ export default function StudentAttendancePage() {
       return;
     }
 
+    if (!classCode.trim()) {
+      setErrorMsg('Please enter the class code your teacher gave you');
+      return;
+    }
+
     if (!sessionDate) {
       setErrorMsg('Please select the date of the class session');
       return;
@@ -68,6 +74,7 @@ export default function StudentAttendancePage() {
       const res = await submitAttendanceCheckinAction({
         matricNo,
         courseName: courseName as (typeof ATTENDANCE_COURSE_NAMES)[number],
+        classCode,
         sessionDate,
         deliveryRating: rating,
         deliveryFeedback: feedback || null,
@@ -96,6 +103,7 @@ export default function StudentAttendancePage() {
 
   const handleReset = () => {
     setReceipt(null);
+    setClassCode('');
     setFeedback('');
     setErrorMsg(null);
   };
@@ -165,6 +173,23 @@ export default function StudentAttendancePage() {
                   value={matricNo}
                   onChange={(e) => setMatricNo(e.target.value.toUpperCase())}
                   className="w-full h-12 px-4 rounded-xl border border-ink-200 bg-surface text-ink-950 font-mono font-semibold text-sm tracking-wide focus:outline-none focus:ring-2 focus:ring-solar-500 focus:border-transparent transition-all uppercase placeholder:normal-case placeholder:font-sans placeholder:text-ink-400"
+                />
+              </div>
+
+              {/* Class code from the teacher */}
+              <div>
+                <label htmlFor="classCodeInput" className="block text-xs font-bold text-ink-700 uppercase tracking-wider mb-2">
+                  Class Code
+                </label>
+                <input
+                  id="classCodeInput"
+                  type="text"
+                  autoComplete="off"
+                  maxLength={20}
+                  placeholder="Given by your teacher in class"
+                  value={classCode}
+                  onChange={(e) => setClassCode(e.target.value.toUpperCase())}
+                  className="w-full h-12 px-4 rounded-xl border border-ink-200 bg-surface text-ink-950 font-mono font-semibold text-sm tracking-widest focus:outline-none focus:ring-2 focus:ring-solar-500 focus:border-transparent transition-all uppercase placeholder:normal-case placeholder:font-sans placeholder:tracking-normal placeholder:font-normal placeholder:text-ink-400"
                 />
               </div>
 

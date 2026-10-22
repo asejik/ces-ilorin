@@ -11,6 +11,7 @@ describe('Attendance Validation Schemas', () => {
     const valid = {
       matricNo: '  ces/ilr/26i901  ',
       courseName: 'Doctrine of Salvation',
+      classCode: ' ab12cd ',
       sessionDate: '2026-09-20',
       deliveryRating: 5,
       deliveryFeedback: 'The class was deeply transformative and clear.',
@@ -21,10 +22,28 @@ describe('Attendance Validation Schemas', () => {
     if (parsed.success) {
       expect(parsed.data.matricNo).toBe('CES/ILR/26I901');
       expect(parsed.data.courseName).toBe('Doctrine of Salvation');
+      expect(parsed.data.classCode).toBe('AB12CD');
       expect(parsed.data.sessionDate).toBe('2026-09-20');
       expect(parsed.data.deliveryRating).toBe(5);
       expect(parsed.data.deliveryFeedback).toBe('The class was deeply transformative and clear.');
     }
+  });
+
+  it('rejects a check-in without a class code', () => {
+    const res = attendanceCheckinSchema.safeParse({
+      matricNo: 'CES/ILR/26I901',
+      courseName: 'Doctrine of Salvation',
+      deliveryRating: 5,
+    });
+    expect(res.success).toBe(false);
+    expect(
+      attendanceCheckinSchema.safeParse({
+        matricNo: 'CES/ILR/26I901',
+        courseName: 'Doctrine of Salvation',
+        classCode: '   ',
+        deliveryRating: 5,
+      }).success
+    ).toBe(false);
   });
 
   it('rejects invalid sessionDate format in attendance check-in', () => {
@@ -83,6 +102,7 @@ describe('Attendance Validation Schemas', () => {
       const res = attendanceCheckinSchema.safeParse({
         matricNo: 'CES/ILR/26I901',
         courseName: c,
+        classCode: 'AB12CD',
         deliveryRating: 5,
       });
       expect(res.success).toBe(true);

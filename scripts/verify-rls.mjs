@@ -51,6 +51,9 @@ const TABLES = [
   'ces_student_assessments',
   'ces_attendance_records',
   'ces_certificates',
+  'ces_matric_counters',
+  'ces_class_codes',
+  'ces_rate_limits',
 ];
 
 // 1. Anonymous reads must return nothing (empty result or permission error).

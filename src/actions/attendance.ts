@@ -3,9 +3,15 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireStaffUser } from '@/lib/auth/guard';
 import {
+  ATTENDANCE_COURSE_NAMES,
   attendanceCheckinSchema,
   type AttendanceCheckinInput,
 } from '@/lib/validation/attendance';
+import { codesMatch, generateCode } from '@/lib/codes';
+import { getClientIp, TOO_MANY_ATTEMPTS, withinRateLimit } from '@/lib/rate-limit';
+
+const CHECKIN_REFUSED =
+  'Matric number or class code is incorrect, or check-in is not open for this class. Please check with your teacher.';
 
 export interface AttendanceCheckinResult {
   success: boolean;
@@ -50,7 +56,8 @@ export async function submitAttendanceCheckinAction(
       return { success: false, error: firstErr };
     }
 
-    const { matricNo, courseName, sessionDate, deliveryRating, deliveryFeedback } = parseResult.data;
+    const { matricNo, courseName, classCode, sessionDate, deliveryRating, deliveryFeedback } =
+      parseResult.data;
     const finalDate = sessionDate || new Date().toISOString().split('T')[0];
 
     // Prevent future dates
@@ -64,7 +71,17 @@ export async function submitAttendanceCheckinAction(
 
     const supabase = createAdminClient();
 
-    // 1. Validate student
+    // 0. Throttle guessing: per network address and per matric number
+    const ip = getClientIp();
+    const allowed =
+      (await withinRateLimit(supabase, `att:ip:${ip}`, 40, 600)) &&
+      (await withinRateLimit(supabase, `att:m:${matricNo}`, 10, 600));
+    if (!allowed) {
+      return { success: false, error: TOO_MANY_ATTEMPTS };
+    }
+
+    // 1. Validate student and class code together. One generic refusal for unknown
+    // student / wrong code / closed class, so matric numbers cannot be harvested.
     const { data: student, error: stuErr } = await supabase
       .from('ces_students')
       .select('id, matric_no, surname, first_name, cohort_type, status, semester_id')
@@ -73,10 +90,18 @@ export async function submitAttendanceCheckinAction(
       .maybeSingle();
 
     if (stuErr || !student) {
-      return {
-        success: false,
-        error: `No registered student found with matric number "${matricNo}". Please check your number.`,
-      };
+      return { success: false, error: CHECKIN_REFUSED };
+    }
+
+    const { data: codeRow } = await supabase
+      .from('ces_class_codes')
+      .select('code, is_open')
+      .eq('semester_id', student.semester_id)
+      .eq('course_name', courseName)
+      .maybeSingle();
+
+    if (!codeRow || !codeRow.is_open || !codesMatch(codeRow.code, classCode)) {
+      return { success: false, error: CHECKIN_REFUSED };
     }
 
     if (student.status !== 'Active') {
@@ -225,5 +250,105 @@ export async function getAttendanceFeedbackAction(
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Failed to fetch attendance feedback';
     return { success: false, error: msg };
+  }
+}
+
+
+export interface ClassCodeItem {
+  id: string;
+  courseName: string;
+  code: string;
+  isOpen: boolean;
+}
+
+/**
+ * Staff Action: lists the class attendance codes for a cohort's active semester,
+ * creating any that do not exist yet (closed, with a random code).
+ */
+export async function getClassCodesAction(
+  cohortType: string = 'Regular'
+): Promise<{ success: boolean; semesterName?: string; codes?: ClassCodeItem[]; error?: string }> {
+  try {
+    await requireStaffUser();
+    const supabase = createAdminClient();
+
+    const { data: semester } = await supabase
+      .from('ces_semesters')
+      .select('id, name')
+      .eq('type', cohortType)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (!semester) {
+      return { success: false, error: `No active semester found for "${cohortType}".` };
+    }
+
+    const { data: existing, error } = await supabase
+      .from('ces_class_codes')
+      .select('id, course_name, code, is_open')
+      .eq('semester_id', semester.id);
+    if (error) return { success: false, error: error.message };
+
+    const have = new Set((existing || []).map((r) => r.course_name));
+    const missing = ATTENDANCE_COURSE_NAMES.filter((n) => !have.has(n));
+    let rows = existing || [];
+    if (missing.length > 0) {
+      const { data: inserted, error: insErr } = await supabase
+        .from('ces_class_codes')
+        .upsert(
+          missing.map((name) => ({
+            semester_id: semester.id,
+            course_name: name,
+            code: generateCode(),
+            is_open: false,
+          })),
+          { onConflict: 'semester_id,course_name', ignoreDuplicates: true }
+        )
+        .select('id, course_name, code, is_open');
+      if (insErr) return { success: false, error: insErr.message };
+      rows = [...rows, ...(inserted || [])];
+    }
+
+    const order = new Map<string, number>(ATTENDANCE_COURSE_NAMES.map((n, i) => [n, i]));
+    const codes = rows
+      .map((r) => ({ id: r.id, courseName: r.course_name, code: r.code, isOpen: r.is_open }))
+      .sort((x, y) => (order.get(x.courseName) ?? 99) - (order.get(y.courseName) ?? 99));
+    return { success: true, semesterName: semester.name, codes };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to load class codes' };
+  }
+}
+
+/** Staff Action: open or close check-in for one class. */
+export async function setClassCodeOpenAction(
+  id: string,
+  isOpen: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await requireStaffUser();
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from('ces_class_codes')
+      .update({ is_open: isOpen, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to update class code' };
+  }
+}
+
+/** Staff Action: replace a class's code with a new random one. */
+export async function regenerateClassCodeAction(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await requireStaffUser();
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from('ces_class_codes')
+      .update({ code: generateCode(), updated_at: new Date().toISOString() })
+      .eq('id', id);
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : 'Failed to regenerate class code' };
   }
 }

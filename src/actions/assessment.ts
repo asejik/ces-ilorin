@@ -1,6 +1,5 @@
 'use server';
 
-import { randomBytes } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireStaffUser } from '@/lib/auth/guard';
 import {
@@ -12,6 +11,11 @@ import {
   type QuizSessionUpdateInput,
 } from '@/lib/validation/assessment';
 import { CES_CURRICULUM } from '@/lib/curriculum';
+import { codesMatch, generateCode } from '@/lib/codes';
+import { getClientIp, TOO_MANY_ATTEMPTS, withinRateLimit } from '@/lib/rate-limit';
+
+const ACCESS_REFUSED =
+  'Matric number or session PIN is incorrect. Please check both, or ask your instructor for the active PIN.';
 
 export interface SanitizedQuestion {
   id: string;
@@ -58,13 +62,6 @@ export interface SubmitAssessmentResult {
 // In-memory cache of verified seeded semesters to eliminate redundant queries per request
 const SEEDED_SEMESTERS_CACHE = new Set<string>();
 
-/** Random 6-char session PIN (no ambiguous characters). Generated server-side only. */
-function generateSessionPin(): string {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const bytes = randomBytes(6);
-  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
-}
-
 /**
  * Ensures a quiz row exists for every course in the catalogue for the semester.
  * New rows start CLOSED with a random PIN. Questions and answer keys are managed
@@ -98,7 +95,7 @@ export async function ensureQuizzesSeeded(semesterId: string): Promise<void> {
         title: course.title,
         assessment_type: course.type,
         max_score: course.maxScore,
-        session_pin: generateSessionPin(),
+        session_pin: generateCode(),
         is_open: false,
       }))
     );
@@ -175,7 +172,17 @@ export async function verifyAssessmentAccessAction(
     const { matricNo, courseCode, sessionPin, cohortType } = parseResult.data;
     const supabase = createAdminClient();
 
-    // 1. Find and validate student
+    // 0. Throttle guessing: per network address and per matric number
+    const ip = getClientIp();
+    const allowed =
+      (await withinRateLimit(supabase, `assess:ip:${ip}`, 60, 600)) &&
+      (await withinRateLimit(supabase, `assess:m:${matricNo}`, 12, 600));
+    if (!allowed) {
+      return { success: false, error: TOO_MANY_ATTEMPTS };
+    }
+
+    // 1. Find the student and the quiz, then check matric + PIN together. Unknown matric
+    // and wrong PIN give the same message, so matric numbers cannot be harvested.
     const { data: student, error: studentErr } = await supabase
       .from('ces_students')
       .select('id, matric_no, surname, first_name, cohort_type, status, semester_id')
@@ -184,31 +191,11 @@ export async function verifyAssessmentAccessAction(
       .maybeSingle();
 
     if (studentErr || !student) {
-      return {
-        success: false,
-        error: `No registered student found with matric number "${matricNo}". Please verify your credentials.`,
-      };
+      return { success: false, error: ACCESS_REFUSED };
     }
 
-    if (student.status !== 'Active') {
-      return {
-        success: false,
-        error: `Student status is ${student.status}. Only active students may take assessments.`,
-      };
-    }
-
-    // Validate cohort match
-    if (cohortType && student.cohort_type !== cohortType) {
-      return {
-        success: false,
-        error: `Matric number "${matricNo}" is registered under the "${student.cohort_type}", but "${cohortType}" is currently selected. Please switch to the ${student.cohort_type} tab above to enter your room.`,
-      };
-    }
-
-    // 2. Ensure quizzes are seeded for the student's semester
     await ensureQuizzesSeeded(student.semester_id);
 
-    // 3. Find target quiz
     const { data: quiz, error: quizErr } = await supabase
       .from('ces_quizzes')
       .select('id, course_code, title, assessment_type, max_score, session_pin, is_open')
@@ -216,27 +203,29 @@ export async function verifyAssessmentAccessAction(
       .eq('course_code', courseCode)
       .maybeSingle();
 
-    if (quizErr || !quiz) {
+    if (quizErr || !quiz || !codesMatch(quiz.session_pin, sessionPin)) {
+      return { success: false, error: ACCESS_REFUSED };
+    }
+
+    // Credentials are valid from here on, so specific messages no longer leak anything.
+    if (student.status !== 'Active') {
       return {
         success: false,
-        error: `Assessment for course "${courseCode}" was not found in your cohort.`,
+        error: `Student status is ${student.status}. Only active students may take assessments.`,
       };
     }
 
-    // 4. Verify Quiz is Open
+    if (cohortType && student.cohort_type !== cohortType) {
+      return {
+        success: false,
+        error: `Matric number "${matricNo}" is registered under the "${student.cohort_type}", but "${cohortType}" is currently selected. Please switch to the ${student.cohort_type} tab above to enter your room.`,
+      };
+    }
+
     if (!quiz.is_open) {
       return {
         success: false,
         error: `The assessment session for "${quiz.title}" is currently closed. Please ask your instructor to open the session.`,
-      };
-    }
-
-    // 5. Verify Session PIN (case-insensitive)
-    const expectedPin = (quiz.session_pin || '').trim().toUpperCase();
-    if (!expectedPin || expectedPin !== sessionPin) {
-      return {
-        success: false,
-        error: `Incorrect Session PIN for "${quiz.title}". Please request the active session PIN from your course instructor.`,
       };
     }
 
@@ -325,6 +314,10 @@ export async function submitAssessmentAction(
 
     const { matricNo, quizId, answers, sessionPin } = parseResult.data;
     const supabase = createAdminClient();
+
+    if (!(await withinRateLimit(supabase, `submit:ip:${getClientIp()}`, 60, 600))) {
+      return { success: false, error: TOO_MANY_ATTEMPTS };
+    }
 
     // 1. Validate student
     const { data: student, error: stuErr } = await supabase
