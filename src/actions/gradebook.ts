@@ -389,8 +389,19 @@ export async function overrideStudentAttendanceAction(
       return { success: false, error: firstErr };
     }
 
-    const { studentId, semesterId, courseName, status } = parseResult.data;
+    const { studentId, courseName, status } = parseResult.data;
     const supabase = createAdminClient();
+
+    // The semester always comes from the student's own record, never from the client.
+    const { data: student, error: stuErr } = await supabase
+      .from('ces_students')
+      .select('semester_id')
+      .eq('id', studentId)
+      .maybeSingle();
+    if (stuErr || !student) {
+      return { success: false, error: 'Student not found.' };
+    }
+    const semesterId = student.semester_id;
 
     const { data: existing } = await supabase
       .from('ces_attendance_records')

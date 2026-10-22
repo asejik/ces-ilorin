@@ -104,7 +104,6 @@ export const scoreOverrideSchema = z.object({
 
 export const attendanceOverrideSchema = z.object({
   studentId: z.string().uuid('Invalid Student ID'),
-  semesterId: z.string().uuid('Invalid Semester ID'),
   courseName: z.string().min(1, 'Course name is required'),
   status: z.enum(['Attended', 'Not Attended', 'Excused'], {
     errorMap: () => ({ message: 'Status must be Attended, Not Attended, or Excused' }),

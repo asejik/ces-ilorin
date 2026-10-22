@@ -115,12 +115,16 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
     }
 
     // 4. Calculate Next Sequence & Generate Matriculation Number
-    // Query count of existing students registered this year & month
-    const { count } = await supabase
-      .from('ces_students')
-      .select('id', { count: 'exact', head: true });
-
-    const sequence = (count || 0) + 1;
+    // Atomic per-month counter (ces_next_matric_seq): safe under concurrent registrations
+    // and never reuses a number after a student is deleted.
+    const { data: sequence, error: seqErr } = await supabase.rpc('ces_next_matric_seq', {
+      p_year: currentYear,
+      p_month: currentMonth,
+    });
+    if (seqErr || typeof sequence !== 'number') {
+      console.error('[Registration] Matric sequence error:', seqErr);
+      return { success: false, error: 'Unable to generate a matric number. Please try again shortly.' };
+    }
     const matricNo = generateMatricNumber({
       year: currentYear,
       month: currentMonth,

@@ -135,7 +135,6 @@ describe('Attendance Override Schema', () => {
   it('validates attendance status choices', () => {
     const valid = {
       studentId: '11111111-1111-1111-1111-111111111111',
-      semesterId: '22222222-2222-2222-2222-222222222222',
       courseName: 'Membership & Vision Class',
       status: 'Attended' as const,
     };
@@ -146,7 +145,6 @@ describe('Attendance Override Schema', () => {
   it('rejects invalid attendance status', () => {
     const invalid = {
       studentId: '11111111-1111-1111-1111-111111111111',
-      semesterId: '22222222-2222-2222-2222-222222222222',
       courseName: 'Membership & Vision Class',
       status: 'Present', // invalid, must be Attended/Not Attended/Excused
     };

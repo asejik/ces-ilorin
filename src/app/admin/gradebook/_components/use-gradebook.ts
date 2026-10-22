@@ -10,10 +10,6 @@ import {
 } from '@/actions/gradebook';
 import type { CohortFilter, GradebookKpis, OverrideTarget, StatusFilter } from './types';
 
-// TODO(audit): hardcoded Regular-cohort semester id; Sunday Cohort toggles are written to
-// the wrong semester. Kept as-is so this refactor changes no behaviour.
-const HARDCODED_SEMESTER_ID = '8b3ade26-2618-4a55-bcc2-85a11669cedc';
-
 /** State, data loading and mutation handlers for the teacher gradebook. */
 export function useGradebook() {
   const [selectedCohort, setSelectedCohort] = useState<CohortFilter>('Regular');
@@ -141,7 +137,6 @@ export function useGradebook() {
 
     await overrideStudentAttendanceAction({
       studentId,
-      semesterId: HARDCODED_SEMESTER_ID,
       courseName,
       status: nextStatus,
     });
