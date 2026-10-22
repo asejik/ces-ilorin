@@ -1,0 +1,152 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import {
+  getBroadsheetAction,
+  issueCertificateAction,
+  batchIssueCertificatesAction,
+} from '@/actions/broadsheet';
+import { exportBroadsheetToExcel } from '@/lib/excel';
+import type { StudentBroadsheetRow, BroadsheetKPIs, CertificateDetails } from '@/types/broadsheet';
+import type { CohortFilter, StatusFilter } from './types';
+
+/** State, data loading and actions for the master graduation broadsheet. */
+export function useBroadsheet() {
+  const [selectedCohort, setSelectedCohort] = useState<CohortFilter>('Regular');
+  const [rows, setRows] = useState<StudentBroadsheetRow[]>([]);
+  const [kpis, setKpis] = useState<BroadsheetKPIs | null>(null);
+  const [semesterName, setSemesterName] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<StatusFilter>('ALL');
+
+  const [certModal, setCertModal] = useState<CertificateDetails | null>(null);
+  const [issuingStudentId, setIssuingStudentId] = useState<string | null>(null);
+  const [batchIssuing, setBatchIssuing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const loadBroadsheet = useCallback(async () => {
+    setLoading(true);
+    const res = await getBroadsheetAction(selectedCohort);
+    if (res.success && res.rows) {
+      setRows(res.rows);
+      setKpis(res.kpis ?? null);
+      setSemesterName(res.semester?.name ?? `${selectedCohort} — 2026`);
+    }
+    setLoading(false);
+  }, [selectedCohort]);
+
+  useEffect(() => {
+    loadBroadsheet();
+  }, [loadBroadsheet]);
+
+  const handleIssueCertificate = async (studentId: string) => {
+    setIssuingStudentId(studentId);
+    const res = await issueCertificateAction(studentId);
+    setIssuingStudentId(null);
+
+    if (res.success && res.certificate) {
+      showToast(`Certificate ${res.certificate.certificateNo} issued successfully!`);
+      // Update row in-place
+      setRows((prev) =>
+        prev.map((r) =>
+          r.studentId === studentId
+            ? {
+                ...r,
+                certificateId: res.certificate!.id,
+                certificateNo: res.certificate!.certificateNo,
+                certificateIssuedAt: res.certificate!.issuedAt,
+              }
+            : r
+        )
+      );
+      setCertModal(res.certificate);
+    } else {
+      showToast(`Failed: ${res.error ?? 'Unknown error'}`);
+    }
+  };
+
+  const handleBatchIssue = async () => {
+    const unissuedGraduates = rows.filter(
+      (r) => r.graduationStatus === '✅ GRADUATE' && !r.certificateId
+    );
+    if (unissuedGraduates.length === 0) {
+      showToast('All qualified graduates already possess issued certificates.');
+      return;
+    }
+
+    setBatchIssuing(true);
+    const res = await batchIssueCertificatesAction(selectedCohort);
+    setBatchIssuing(false);
+
+    if (res.success) {
+      showToast(`Batch completed: ${res.issuedCount ?? 0} new certificate(s) issued.`);
+      loadBroadsheet();
+    } else {
+      showToast(`Batch error: ${res.error ?? 'Failed to issue'}`);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (rows.length === 0) {
+      showToast('No student data available to export.');
+      return;
+    }
+    exportBroadsheetToExcel({
+      cohortName: selectedCohort,
+      semesterName,
+      rows,
+      kpis,
+    });
+    showToast('Official broadsheet spreadsheet downloaded!');
+  };
+
+  const filteredRows = rows.filter((r) => {
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      r.matricNo.toLowerCase().includes(q) ||
+      r.fullName.toLowerCase().includes(q) ||
+      (r.certificateNo && r.certificateNo.toLowerCase().includes(q));
+
+    if (!matchesSearch) return false;
+
+    if (filterStatus === 'GRADUATE') return r.graduationStatus === '✅ GRADUATE';
+    if (filterStatus === 'PENDING') return r.graduationStatus === '⏳ PENDING';
+    if (filterStatus === 'NOT_YET') return r.graduationStatus === '❌ NOT YET';
+    if (filterStatus === 'HONOURS') {
+      return r.honourClass === 'Distinction' || r.honourClass === 'Merit';
+    }
+
+    return true;
+  });
+
+  return {
+    selectedCohort,
+    setSelectedCohort,
+    rows,
+    kpis,
+    semesterName,
+    loading,
+    searchQuery,
+    setSearchQuery,
+    filterStatus,
+    setFilterStatus,
+    filteredRows,
+    certModal,
+    setCertModal,
+    closeCertModal: () => setCertModal(null),
+    issuingStudentId,
+    batchIssuing,
+    toastMessage,
+    loadBroadsheet,
+    handleIssueCertificate,
+    handleBatchIssue,
+    handleExportExcel,
+  };
+}

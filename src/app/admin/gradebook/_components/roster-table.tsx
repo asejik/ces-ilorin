@@ -1,6 +1,6 @@
 import type { StudentGradebookRow } from '@/actions/gradebook';
 import { RosterRow, type OpenScoreOverride, type ToggleAttendance } from './roster-row';
-import { QUIZ_COLUMNS } from './types';
+import { QUIZ_COLUMNS } from '@/lib/quiz-columns';
 
 export function RosterTable({
   loading,

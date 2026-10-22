@@ -1,5 +1,5 @@
 import type { StudentGradebookRow } from '@/actions/gradebook';
-import { QUIZ_COLUMNS } from './types';
+import { QUIZ_COLUMNS } from '@/lib/quiz-columns';
 
 export type OpenScoreOverride = (
   student: StudentGradebookRow,
