@@ -1,5 +1,6 @@
 'use server';
 
+import { randomBytes } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireStaffUser } from '@/lib/auth/guard';
 import {
@@ -54,14 +55,22 @@ export interface SubmitAssessmentResult {
   matricNo?: string;
 }
 
-// In-memory cache of verified seeded semesters to eliminate 10 redundant queries per request
+// In-memory cache of verified seeded semesters to eliminate redundant queries per request
 const SEEDED_SEMESTERS_CACHE = new Set<string>();
 
+/** Random 6-char session PIN (no ambiguous characters). Generated server-side only. */
+function generateSessionPin(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(6);
+  return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join('');
+}
+
 /**
- * Ensures all standard courses and questions from curriculum are seeded
- * for an active semester if not already present.
+ * Ensures a quiz row exists for every course in the catalogue for the semester.
+ * New rows start CLOSED with a random PIN. Questions and answer keys are managed
+ * in the database only (never in source control), so none are seeded here.
  */
-export async function ensureQuizzesAndQuestionsSeeded(semesterId: string): Promise<void> {
+export async function ensureQuizzesSeeded(semesterId: string): Promise<void> {
   if (SEEDED_SEMESTERS_CACHE.has(semesterId)) {
     return;
   }
@@ -70,7 +79,7 @@ export async function ensureQuizzesAndQuestionsSeeded(semesterId: string): Promi
 
   const { data: existingQuizzes, error: qErr } = await supabase
     .from('ces_quizzes')
-    .select('id, course_code')
+    .select('course_code')
     .eq('semester_id', semesterId);
 
   if (qErr) {
@@ -79,58 +88,24 @@ export async function ensureQuizzesAndQuestionsSeeded(semesterId: string): Promi
   }
 
   const existingCodes = new Set((existingQuizzes || []).map((q) => q.course_code));
+  const missing = CES_CURRICULUM.filter((c) => !existingCodes.has(c.code));
 
-  for (const course of CES_CURRICULUM) {
-    let quizId: string;
+  if (missing.length > 0) {
+    const { error: insertErr } = await supabase.from('ces_quizzes').insert(
+      missing.map((course) => ({
+        semester_id: semesterId,
+        course_code: course.code,
+        title: course.title,
+        assessment_type: course.type,
+        max_score: course.maxScore,
+        session_pin: generateSessionPin(),
+        is_open: false,
+      }))
+    );
 
-    if (!existingCodes.has(course.code)) {
-      const { data: newQuiz, error: insertQErr } = await supabase
-        .from('ces_quizzes')
-        .insert({
-          semester_id: semesterId,
-          course_code: course.code,
-          title: course.title,
-          assessment_type: course.type,
-          max_score: course.maxScore,
-          session_pin: course.defaultPin,
-          is_open: true,
-        })
-        .select('id')
-        .single();
-
-      if (insertQErr || !newQuiz) {
-        console.error(`[Seeder] Failed to insert quiz ${course.code}:`, insertQErr);
-        continue;
-      }
-      quizId = newQuiz.id;
-    } else {
-      const found = existingQuizzes?.find((q) => q.course_code === course.code);
-      quizId = found!.id;
-    }
-
-    // Check if questions exist for this quiz
-    const { count } = await supabase
-      .from('ces_quiz_questions')
-      .select('id', { count: 'exact', head: true })
-      .eq('quiz_id', quizId);
-
-    if (!count || count === 0) {
-      const questionsToInsert = course.questions.map((q, idx) => ({
-        quiz_id: quizId,
-        question_text: q.questionText,
-        options: q.options,
-        correct_option_index: q.correctOptionIndex,
-        marks: q.marks,
-        sort_order: idx + 1,
-      }));
-
-      const { error: insQuestErr } = await supabase
-        .from('ces_quiz_questions')
-        .insert(questionsToInsert);
-
-      if (insQuestErr) {
-        console.error(`[Seeder] Failed to seed questions for ${course.code}:`, insQuestErr);
-      }
+    if (insertErr) {
+      console.error('[Seeder] Failed to insert quizzes:', insertErr);
+      return;
     }
   }
 
@@ -157,7 +132,7 @@ export async function getAvailableQuizzesAction(cohortType: string = 'Regular') 
     }
 
     // Ensure seeded
-    await ensureQuizzesAndQuestionsSeeded(semester.id);
+    await ensureQuizzesSeeded(semester.id);
 
     // 2. Fetch quizzes (without leaking session PINs)
     const { data: quizzes, error } = await supabase
@@ -231,7 +206,7 @@ export async function verifyAssessmentAccessAction(
     }
 
     // 2. Ensure quizzes are seeded for the student's semester
-    await ensureQuizzesAndQuestionsSeeded(student.semester_id);
+    await ensureQuizzesSeeded(student.semester_id);
 
     // 3. Find target quiz
     const { data: quiz, error: quizErr } = await supabase
@@ -476,7 +451,7 @@ export async function getTeacherQuizzesAction(cohortType: string = 'Regular') {
       return { success: false, error: `No active semester found for cohort: ${cohortType}` };
     }
 
-    await ensureQuizzesAndQuestionsSeeded(semester.id);
+    await ensureQuizzesSeeded(semester.id);
 
     const { data: quizzes, error } = await supabase
       .from('ces_quizzes')

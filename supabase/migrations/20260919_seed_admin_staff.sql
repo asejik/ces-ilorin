@@ -12,6 +12,6 @@ SELECT
   u.email,
   'super_admin'
 FROM auth.users u
-WHERE u.email = 'admin@example.org'
+WHERE u.email = 'REPLACE_WITH_ADMIN_EMAIL' -- set your real admin address when running this; never commit it
 ON CONFLICT (id) DO UPDATE 
 SET role = 'super_admin', full_name = 'Lead Administrator';

@@ -155,26 +155,19 @@ describe('Curriculum Security & Question Integrity', () => {
     expect(CES_CURRICULUM).toHaveLength(9);
   });
 
-  it('verifies all 8 modular quizzes have exactly 5 questions and 5.0 max score', () => {
+  it('verifies all 8 modular quizzes have a 5.0 max score and the exam 60', () => {
     const modularQuizzes = CES_CURRICULUM.filter((c) => c.type === 'quiz');
     expect(modularQuizzes).toHaveLength(8);
-
     for (const quiz of modularQuizzes) {
       expect(quiz.maxScore).toBe(5.0);
-      expect(quiz.questions).toHaveLength(5);
-      const totalMarks = quiz.questions.reduce((sum, q) => sum + q.marks, 0);
-      expect(totalMarks).toBe(5.0);
     }
+    expect(CES_CURRICULUM.find((c) => c.type === 'final_exam')?.maxScore).toBe(60.0);
   });
 
-  it('verifies all questions have exactly 4 options and valid correctOptionIndex (0..3)', () => {
+  it('keeps answer keys and session PINs out of the public catalogue', () => {
     for (const course of CES_CURRICULUM) {
-      for (const q of course.questions) {
-        expect(q.options).toHaveLength(4);
-        expect(q.correctOptionIndex).toBeGreaterThanOrEqual(0);
-        expect(q.correctOptionIndex).toBeLessThanOrEqual(3);
-        expect(q.options[q.correctOptionIndex]).toBeDefined();
-      }
+      expect(course).not.toHaveProperty('questions');
+      expect(course).not.toHaveProperty('defaultPin');
     }
   });
 

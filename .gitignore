@@ -32,3 +32,11 @@ yarn-error.log*
 coverage/
 playwright-report/
 test-results/
+
+# Private material - never commit (question bank with answer keys, client files, PIN lists)
+private/
+supabase/private/
+*.xlsx
+*.xls
+*.docx
+*.csv
