@@ -11,7 +11,7 @@ describe('Assessment Validation Schemas', () => {
     const valid = {
       matricNo: '  ces/ilr/26i901  ',
       courseCode: '  Salvation  ',
-      sessionPin: '  salv26  ',
+      sessionPin: '  abc123  ',
     };
 
     const parsed = assessmentAccessSchema.safeParse(valid);
@@ -19,13 +19,13 @@ describe('Assessment Validation Schemas', () => {
     if (parsed.success) {
       expect(parsed.data.matricNo).toBe('CES/ILR/26I901');
       expect(parsed.data.courseCode).toBe('salvation');
-      expect(parsed.data.sessionPin).toBe('SALV26');
+      expect(parsed.data.sessionPin).toBe('ABC123');
     }
 
     const withCohort = assessmentAccessSchema.safeParse({
       matricNo: 'CES/ILR/26I901',
       courseCode: 'salvation',
-      sessionPin: 'SALV26',
+      sessionPin: 'ABC123',
       cohortType: 'Sunday Cohort',
     });
     expect(withCohort.success).toBe(true);
@@ -38,7 +38,7 @@ describe('Assessment Validation Schemas', () => {
     const invalid = {
       matricNo: '',
       courseCode: 'salvation',
-      sessionPin: 'SALV26',
+      sessionPin: 'ABC123',
     };
 
     const parsed = assessmentAccessSchema.safeParse(invalid);
