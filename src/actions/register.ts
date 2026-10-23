@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { failWith } from '@/lib/errors';
 import { lagosDateParts } from '@/lib/lagos-time';
+import { CONSENT_VERSION } from '@/lib/consent';
 import { cookies } from 'next/headers';
 import { RECEIPT_COOKIE, RECEIPT_MAX_AGE_SECONDS } from '@/lib/registration-receipt';
 import {
@@ -126,6 +127,25 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
       semesterId = newSemester.id;
     }
 
+    // One registration per email address per semester. Checked before a matric number is
+    // issued or a photo uploaded, so a repeat attempt wastes neither.
+    const normalizedEmail = validatedData.email_address.trim().toLowerCase();
+    const { data: existingStudent } = await supabase
+      .from('ces_students')
+      .select('id')
+      .eq('email_address', normalizedEmail)
+      .eq('semester_id', semesterId)
+      .eq('is_deleted', false)
+      .limit(1)
+      .maybeSingle();
+    if (existingStudent) {
+      return {
+        success: false,
+        error:
+          'This email address is already registered for this cohort. Please check your inbox (and spam folder) for your matric number, or contact the school office.',
+      };
+    }
+
     // 4. Calculate Next Sequence & Generate Matriculation Number
     // Atomic per-month counter (ces_next_matric_seq): safe under concurrent registrations
     // and never reuses a number after a student is deleted.
@@ -206,29 +226,21 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
       emergency_contact_phone: validatedData.emergency_contact_phone || null,
       notes: validatedData.notes || null,
       passport_url: passportUrl,
+      consent_at: new Date().toISOString(),
+      consent_version: CONSENT_VERSION,
     };
-
-    // Abuse Deterrence: prevent duplicate rapid submissions for the same email within 60s
-    const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
-    const { data: recentRegistration } = await supabase
-      .from('ces_students')
-      .select('matric_no')
-      .eq('email_address', validatedData.email_address.trim().toLowerCase())
-      .gte('created_at', oneMinuteAgo)
-      .maybeSingle();
-
-    if (recentRegistration) {
-      return {
-        success: false,
-        error: 'A registration for this email address was received recently. Please check your email or wait before retrying.',
-      };
-    }
 
     const { error: insertErr } = await supabase.from('ces_students').insert(studentRecord);
     if (insertErr) {
       console.error('[Registration] Database insert error:', insertErr);
       if (insertErr.code === '23505') {
-        return { success: false, error: 'A student with this matric number or email already exists.' };
+        if (insertErr.message.includes('uq_ces_students_email_semester')) {
+          return {
+            success: false,
+            error: 'This email address is already registered for this cohort. Please check your inbox for your matric number.',
+          };
+        }
+        return { success: false, error: 'Registration could not be completed. Please try again.' };
       }
       if (insertErr.code === '23503') {
         return { success: false, error: 'Referenced cohort semester does not exist in database.' };
@@ -241,12 +253,24 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
 
     // 7. Dispatch Automated Welcome Email
     const fullName = `${validatedData.first_name} ${validatedData.surname}`;
-    await sendWelcomeEmail({
+    const emailResult = await sendWelcomeEmail({
       to: validatedData.email_address,
       studentName: fullName,
       matricNo,
       cohortType: validatedData.cohort_type,
     });
+
+    // Record the outcome so staff can see who never received their matric number.
+    const { error: statusErr } = await supabase
+      .from('ces_students')
+      .update({
+        email_status: emailResult.status,
+        email_sent_at: emailResult.status === 'sent' ? new Date().toISOString() : null,
+      })
+      .eq('matric_no', matricNo);
+    if (statusErr) {
+      console.error('[Registration] could not record email status:', statusErr.message);
+    }
 
     // Keep the name and matric number out of the URL: hand them to the success page
     // through a short-lived, server-only cookie instead.

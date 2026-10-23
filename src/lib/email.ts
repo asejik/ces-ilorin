@@ -72,7 +72,7 @@ async function loadManualAttachment(): Promise<{ filename: string; content: Buff
  */
 export async function sendWelcomeEmail(
   params: SendWelcomeEmailParams
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; status: 'sent' | 'failed' | 'not_configured'; error?: string }> {
   const { to, studentName, matricNo, cohortType } = params;
 
   const safeName = escapeHtml(studentName);
@@ -177,7 +177,7 @@ export async function sendWelcomeEmail(
   // If no SMTP configured, log in development and return graceful success
   if (!transporter) {
     console.log(`[Email Service (Dev Mock)] Welcome email generated for ${to} (${matricNo})`);
-    return { success: true };
+    return { success: true, status: 'not_configured' };
   }
 
   try {
@@ -188,11 +188,11 @@ export async function sendWelcomeEmail(
       subject: `Welcome to Citizens Elementary School — Your Matric No: ${matricNo}`,
       html: htmlContent,
     });
-    return { success: true };
+    return { success: true, status: 'sent' };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error('[Email Service] Failed to send welcome email:', errorMsg);
     // Don't throw; return status so caller can handle gracefully
-    return { success: false, error: errorMsg };
+    return { success: false, status: 'failed', error: errorMsg };
   }
 }

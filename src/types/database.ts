@@ -49,6 +49,10 @@ export interface CesStudent {
   emergency_contact_phone?: string | null;
   notes?: string | null;
   passport_url?: string | null;
+  consent_at?: string | null;
+  consent_version?: string | null;
+  email_status?: 'unknown' | 'pending' | 'sent' | 'failed' | 'not_configured';
+  email_sent_at?: string | null;
   is_deleted: boolean;
   created_at: string;
 }
