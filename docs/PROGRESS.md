@@ -109,6 +109,13 @@
 - Checks: tsc clean, 86 unit tests (+11), lint clean, production build OK.
 - Next: Phase 2 (migration: restrict deletes, consent columns, email status/unique).
 
+### 2026-10-28 - P03 Phase 2 (database) - DONE and verified
+- Migration `20261027_p03_integrity_consent_email.sql` (+ rollback): foreign keys from assessments/attendance/certificates to students are now `ON DELETE RESTRICT`; `consent_at`, `consent_version`, `email_status`, `email_sent_at` on `ces_students`; unique index `uq_ces_students_email_semester` (lower(trim(email)), semester, live rows only).
+- App: registration checks for an existing email in the semester before issuing a matric number or uploading a photo, stores consent (`CONSENT_VERSION` in `src/lib/consent.ts`) and records the email result (`sent` / `failed` / `not_configured`).
+- Verified live: a new registration (`26J1007`) stored consent time + version and `email_status = not_configured` (dev mock); a repeat with the same email in different capitals was refused with the inbox message and consumed no matric number; a direct database insert of the same email was rejected (23505); deleting a student who has scores was rejected (23503); `test:rls` still passes. Existing students show `unknown`.
+- Reset note: to wipe test students you must now delete their scores, attendance and certificates first.
+- Next: Phase 3 (separate production Supabase project, real E2E tests, load test, CI).
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
