@@ -17,6 +17,7 @@ export function useBroadsheet() {
   const [kpis, setKpis] = useState<BroadsheetKPIs | null>(null);
   const [semesterName, setSemesterName] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<StatusFilter>('ALL');
 
@@ -33,7 +34,17 @@ export function useBroadsheet() {
   const loadBroadsheet = useCallback(async () => {
     setLoading(true);
     const res = await getBroadsheetAction(selectedCohort);
+    if (!res.success) {
+      setRows([]);
+      setKpis(null);
+      setLoadError(
+        /Forbidden/.test(res.error ?? '')
+          ? 'The master broadsheet, certificates and Excel export are for administrators only. Teachers can use the Gradebook.'
+          : res.error ?? 'Could not load the broadsheet.'
+      );
+    }
     if (res.success && res.rows) {
+      setLoadError(null);
       setRows(res.rows);
       setKpis(res.kpis ?? null);
       setSemesterName(res.semester?.name ?? `${selectedCohort} — 2026`);
@@ -132,6 +143,7 @@ export function useBroadsheet() {
     rows,
     kpis,
     semesterName,
+    loadError,
     loading,
     searchQuery,
     setSearchQuery,

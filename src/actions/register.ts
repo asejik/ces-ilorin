@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { failWith } from '@/lib/errors';
+import { cookies } from 'next/headers';
+import { RECEIPT_COOKIE, RECEIPT_MAX_AGE_SECONDS } from '@/lib/registration-receipt';
 import {
   studentRegistrationSchema,
   validatePassportFile,
@@ -244,6 +246,20 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
       matricNo,
       cohortType: validatedData.cohort_type,
     });
+
+    // Keep the name and matric number out of the URL: hand them to the success page
+    // through a short-lived, server-only cookie instead.
+    (await cookies()).set(
+      RECEIPT_COOKIE,
+      JSON.stringify({ matricNo, studentName: fullName, cohortType: validatedData.cohort_type }),
+      {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/register',
+        maxAge: RECEIPT_MAX_AGE_SECONDS,
+      }
+    );
 
     return {
       success: true,

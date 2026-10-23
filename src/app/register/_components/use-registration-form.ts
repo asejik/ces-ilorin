@@ -68,13 +68,7 @@ export function useRegistrationForm() {
         return;
       }
 
-      const queryParams = new URLSearchParams({
-        matricNo: result.matricNo || '',
-        name: result.studentName || '',
-        cohort: result.cohortType || cohortType,
-      });
-
-      router.push(`/register/success?${queryParams.toString()}`);
+      router.push('/register/success');
     } catch {
       setError('An unexpected connection error occurred. Please try again.');
       setLoading(false);

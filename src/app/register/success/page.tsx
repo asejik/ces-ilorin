@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { RECEIPT_COOKIE, parseReceipt } from '@/lib/registration-receipt';
 import { 
   CheckCircle2, 
   BookOpen, 
@@ -17,19 +19,31 @@ export const metadata: Metadata = {
   },
 };
 
-interface SuccessPageProps {
-  searchParams: Promise<{
-    matricNo?: string;
-    name?: string;
-    cohort?: string;
-  }>;
-}
+export default async function RegisterSuccessPage() {
+  // Details come from a short-lived server-set cookie, not from the URL.
+  const receipt = parseReceipt((await cookies()).get(RECEIPT_COOKIE)?.value);
 
-export default async function RegisterSuccessPage({ searchParams }: SuccessPageProps) {
-  const query = await searchParams;
-  const matricNo = query.matricNo || 'CES/ILR/26XXXX';
-  const studentName = query.name || 'Student';
-  const cohortType = query.cohort || 'Regular';
+  if (!receipt) {
+    return (
+      <main className="min-h-screen bg-canvas py-12 px-4 flex flex-col justify-center items-center">
+        <div className="max-w-md w-full bg-surface rounded-2xl border border-ink-200 shadow-md p-8 text-center">
+          <h1 className="font-heading font-bold text-xl text-ink-950 mb-2">No recent registration found</h1>
+          <p className="text-sm text-ink-600 mb-6">
+            This page only appears right after you register. If you have just registered, check your email for your
+            matriculation number and the course manual.
+          </p>
+          <Link
+            href="/register"
+            className="inline-flex h-11 px-5 items-center rounded-xl bg-ink-950 text-white text-sm font-bold hover:bg-ink-900"
+          >
+            Back to Registration
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  const { matricNo, studentName, cohortType } = receipt;
   const isSunday = cohortType === 'Sunday Cohort';
 
   return (

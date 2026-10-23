@@ -94,6 +94,13 @@
 - Verified live: `test:rls` passes including `ces_audit_log`; update to 6 on a 5-mark quiz and to -1 rejected (23514), same-value update allowed; a score override (4, reason) and an attendance toggle through the gradebook each wrote an audit row with actor email, old/new value and reason; UPDATE and DELETE on an audit row rejected ("append-only"). Temp teacher deleted. Two test audit rows remain by design (append-only).
 - Pending: batch 3 (teacher/admin role split, success-page cookie).
 
+### 2026-10-26 - P04 batch 3 (roles + success-page cookie) - DONE and verified
+- **Role split (P04-10)**: `ADMIN_ROLES` (super_admin, ces_admin) now required for `getBroadsheetAction`, `issueCertificateAction`, `batchIssueCertificatesAction`, `getCertificateByMatricAction` (broadsheet, certificates, Excel export). Teachers keep gradebook, score/attendance overrides, class codes, quiz open/close and PIN manager. The broadsheet page shows an "administrators only" notice for teachers.
+- **Success page (P04-15)**: `registerStudentAction` sets an httpOnly, 15-minute cookie (`ces_reg_receipt`, path /register); `/register/success` reads it and the URL carries no name or matric number. Without the cookie the page shows "No recent registration found".
+- Verified live: registration gave `/register/success` with no query string and the cookie is not visible to page scripts; direct visit without cookie shows the fallback; temp teacher: broadsheet shows the admin-only notice and no rows, gradebook (5 rows), quiz PIN manager and 13 class-code rows work; temp ces_admin: broadsheet shows 5 rows. tsc clean, 75 unit tests, build OK. Temp accounts deleted.
+- Not exercised live: issuing a certificate as a teacher (same guard as the broadsheet read, which was rejected). The Export and Batch Issue buttons are still visible to teachers (they do nothing useful: no data, server rejects).
+- P04 status now: Owner tasks remain (disable public sign-ups; fresh exam questions; sermons-app privilege review; Turnstile keys). Code/database P04 work is complete apart from the nonce-based CSP (P04-13).
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.

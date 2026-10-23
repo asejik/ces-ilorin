@@ -8,6 +8,9 @@ export interface StaffUser {
   role: 'super_admin' | 'ces_admin' | 'ces_teacher';
 }
 
+/** Roles allowed to issue certificates and use the broadsheet / export. Teachers are excluded. */
+export const ADMIN_ROLES: Array<'super_admin' | 'ces_admin'> = ['super_admin', 'ces_admin'];
+
 /**
  * Validates that the active request originates from an authenticated CES staff member.
  * Throws an Error with 401/403 status message if unauthenticated or unauthorized.

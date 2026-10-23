@@ -2,7 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { failWith } from '@/lib/errors';
-import { requireStaffUser } from '@/lib/auth/guard';
+import { ADMIN_ROLES, requireStaffUser } from '@/lib/auth/guard';
 import { signPassportPaths } from '@/lib/passport-photos';
 import {
   calculateCumulativeScore,
@@ -38,7 +38,7 @@ export async function getBroadsheetAction(
   cohortType: string = 'Regular'
 ): Promise<BroadsheetResponse> {
   try {
-    await requireStaffUser();
+    await requireStaffUser(ADMIN_ROLES);
     const supabase = createAdminClient();
 
     // 1. Resolve active semester
@@ -313,7 +313,7 @@ export async function issueCertificateAction(
   studentId: string
 ): Promise<{ success: boolean; certificate?: CertificateDetails; error?: string }> {
   try {
-    await requireStaffUser();
+    await requireStaffUser(ADMIN_ROLES);
     if (!studentId) {
       return { success: false, error: 'Student ID is required' };
     }
@@ -487,7 +487,7 @@ export async function batchIssueCertificatesAction(
   cohortType: string = 'Regular'
 ): Promise<{ success: boolean; issuedCount?: number; totalGraduates?: number; error?: string }> {
   try {
-    await requireStaffUser();
+    await requireStaffUser(ADMIN_ROLES);
     const broadsheetRes = await getBroadsheetAction(cohortType);
     if (!broadsheetRes.success || !broadsheetRes.rows) {
       return { success: false, error: broadsheetRes.error || 'Failed to inspect broadsheet' };
@@ -547,7 +547,7 @@ export async function getCertificateByMatricAction(
   identifier: string
 ): Promise<{ success: boolean; certificate?: CertificateDetails; error?: string }> {
   try {
-    await requireStaffUser();
+    await requireStaffUser(ADMIN_ROLES);
     const supabase = createAdminClient();
     const cleanId = decodeURIComponent(identifier).trim().toUpperCase();
 
