@@ -6,26 +6,14 @@
  * data: write attempts use fake foreign keys, so they fail even if row-level security
  * lets them through (error 23503 = "was allowed past RLS" = FAIL).
  *
- * Usage:  npm run test:rls          (reads .env.local)
+ * Usage:  npm run test:rls                                  (reads .env.local)
+ *          node scripts/verify-rls.mjs --env private/env/production.env
  * Exit code 0 = all checks passed, 1 = at least one exposure found.
  */
 import { createClient } from '@supabase/supabase-js';
-import fs from 'node:fs';
+import { loadEnv } from './lib/load-env.mjs';
 
-function loadEnv() {
-  const env = { ...process.env };
-  if (fs.existsSync('.env.local')) {
-    for (const line of fs.readFileSync('.env.local', 'utf8').split(/\r?\n/)) {
-      if (!line || line.startsWith('#') || !line.includes('=')) continue;
-      const i = line.indexOf('=');
-      const k = line.slice(0, i).trim();
-      if (!(k in env)) env[k] = line.slice(i + 1).trim().replace(/^"|"$/g, '');
-    }
-  }
-  return env;
-}
-
-const env = loadEnv();
+const { env } = loadEnv();
 const url = env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 if (!url || !anonKey) {

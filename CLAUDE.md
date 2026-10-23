@@ -66,6 +66,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Public Repo — Never Commit Private Material
 The GitHub repo is intentionally PUBLIC. Never commit: question text/answer keys, session PINs, client files (xlsx/docx), real emails/phones, the course manual, or secrets. Keep them in gitignored `private/` (local only) or in the database/private storage. Questions + PINs live in `ces_quiz_questions`/`ces_quizzes`; new quizzes are created closed with a random server-generated PIN. The course manual is in the private bucket `ces-private` (`manuals/course-manual.pdf`) and is attached to the welcome email — never served from `public/`. Project lives at `D:devces`; an hourly task backs it up to Drive.
 
+## Environments
+- `.env.local` = development/staging Supabase project (the old project shared with the sermons app). Tests and load tests run against this one.
+- `private/env/production.env` (gitignored) = the dedicated CES production project. Scripts take `--env private/env/production.env`; never put production keys in `.env.local`. Next.js reads only `.env.local` locally, so `npm run dev/start` always uses the dev project.
+- New project set-up: `npm run db:fresh-install` writes `supabase/fresh-install/ces_fresh_install.sql` (all migrations, minus the old blanket grants); run it once in the new project's SQL editor, then `node scripts/setup-project.mjs --env private/env/production.env`, create the admin in the dashboard, then `node scripts/make-staff.mjs`.
+
 ## Code Conventions
 - Use TypeScript strictly; `any` is forbidden.
 - Use Zod schemas for all form validations and API payloads.

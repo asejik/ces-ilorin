@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:load": "node load-test/load-test.mjs",
-    "test:rls": "node scripts/verify-rls.mjs"
+    "test:rls": "node scripts/verify-rls.mjs",
+    "db:fresh-install": "node scripts/build-fresh-install.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.1",
