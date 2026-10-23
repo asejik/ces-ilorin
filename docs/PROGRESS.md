@@ -89,6 +89,11 @@
 - Checks: tsc clean, 73 unit tests, production build OK. Test accounts (staff + non-staff) deleted afterwards.
 - Pending: batch 2 (migration: audit log, score CHECK, `is_ces_staff` search_path) and batch 3 (role matrix, success-page cookie).
 
+### 2026-10-25 - P04 batch 2 (database) - DONE and verified
+- Migration `20261025_p04_audit_log_and_score_guard.sql` (+ rollback): `ces_audit_log` (append-only, no FKs), trigger `ces_enforce_score_range`, `is_ces_staff()` search_path pinned. App: `src/lib/audit.ts`; score and attendance overrides write audit rows (score overrides on a student with no score now also record `overridden_by`).
+- Verified live: `test:rls` passes including `ces_audit_log`; update to 6 on a 5-mark quiz and to -1 rejected (23514), same-value update allowed; a score override (4, reason) and an attendance toggle through the gradebook each wrote an audit row with actor email, old/new value and reason; UPDATE and DELETE on an audit row rejected ("append-only"). Temp teacher deleted. Two test audit rows remain by design (append-only).
+- Pending: batch 3 (teacher/admin role split, success-page cookie).
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
