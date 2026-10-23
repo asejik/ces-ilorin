@@ -40,3 +40,4 @@ supabase/private/
 *.xls
 *.docx
 *.csv
+e2e/.state.json

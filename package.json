@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:load": "node load-test/load-test.mjs",
+    "test:load:quiz": "node load-test/quiz-load-test.mjs",
     "test:rls": "node scripts/verify-rls.mjs",
     "db:fresh-install": "node scripts/build-fresh-install.mjs"
   },

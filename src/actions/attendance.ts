@@ -77,7 +77,8 @@ export async function submitAttendanceCheckinAction(
     // 0. Throttle guessing: per network address and per matric number
     const ip = await getClientIp();
     const allowed =
-      (await withinRateLimit(supabase, `att:ip:${ip}`, 40, 600)) &&
+      // Generous per-address limit: a whole class checks in from one shared network.
+      (await withinRateLimit(supabase, `att:ip:${ip}`, 300, 600)) &&
       (await withinRateLimit(supabase, `att:m:${matricNo}`, 10, 600));
     if (!allowed) {
       return { success: false, error: TOO_MANY_ATTEMPTS };

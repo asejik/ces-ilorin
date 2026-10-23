@@ -172,36 +172,47 @@ export async function verifyAssessmentAccessAction(
     const { matricNo, courseCode, sessionPin, cohortType } = parseResult.data;
     const supabase = createAdminClient();
 
-    // 0. Throttle guessing: per network address and per matric number
+    // Round trips to the database dominate latency, so independent queries run together.
+    // 0 + 1. Throttle guessing (per network address and per matric number) while looking up the
+    // student. Per-address limits are generous on purpose: a whole class shares one wifi /
+    // mobile-carrier address; the strict brute-force guard is the per-matric limit.
     const ip = await getClientIp();
-    const allowed =
-      (await withinRateLimit(supabase, `assess:ip:${ip}`, 60, 600)) &&
-      (await withinRateLimit(supabase, `assess:m:${matricNo}`, 12, 600));
-    if (!allowed) {
+    const [ipOk, matricOk, studentResult] = await Promise.all([
+      withinRateLimit(supabase, `assess:ip:${ip}`, 300, 600),
+      withinRateLimit(supabase, `assess:m:${matricNo}`, 12, 600),
+      supabase
+        .from('ces_students')
+        .select('id, matric_no, surname, first_name, cohort_type, status, semester_id')
+        .eq('matric_no', matricNo)
+        .eq('is_deleted', false)
+        .maybeSingle(),
+    ]);
+    if (!ipOk || !matricOk) {
       return { success: false, error: TOO_MANY_ATTEMPTS };
     }
 
-    // 1. Find the student and the quiz, then check matric + PIN together. Unknown matric
-    // and wrong PIN give the same message, so matric numbers cannot be harvested.
-    const { data: student, error: studentErr } = await supabase
-      .from('ces_students')
-      .select('id, matric_no, surname, first_name, cohort_type, status, semester_id')
-      .eq('matric_no', matricNo)
-      .eq('is_deleted', false)
-      .maybeSingle();
+    // Find the quiz, then check matric + PIN together. Unknown matric and wrong PIN give the
+    // same message, so matric numbers cannot be harvested.
+    const { data: student, error: studentErr } = studentResult;
 
     if (studentErr || !student) {
       return { success: false, error: ACCESS_REFUSED };
     }
 
-    await ensureQuizzesSeeded(student.semester_id);
+    const loadQuiz = () =>
+      supabase
+        .from('ces_quizzes')
+        .select('id, course_code, title, assessment_type, max_score, session_pin, is_open')
+        .eq('semester_id', student.semester_id)
+        .eq('course_code', courseCode)
+        .maybeSingle();
 
-    const { data: quiz, error: quizErr } = await supabase
-      .from('ces_quizzes')
-      .select('id, course_code, title, assessment_type, max_score, session_pin, is_open')
-      .eq('semester_id', student.semester_id)
-      .eq('course_code', courseCode)
-      .maybeSingle();
+    let { data: quiz, error: quizErr } = await loadQuiz();
+    if (!quiz && !quizErr) {
+      // First visit of a new semester: create its quiz rows (closed), then look again.
+      await ensureQuizzesSeeded(student.semester_id);
+      ({ data: quiz, error: quizErr } = await loadQuiz());
+    }
 
     if (quizErr || !quiz || !codesMatch(quiz.session_pin, sessionPin)) {
       return { success: false, error: ACCESS_REFUSED };
@@ -229,13 +240,21 @@ export async function verifyAssessmentAccessAction(
       };
     }
 
-    // 6. Check for duplicate submission
-    const { data: existingSubmission } = await supabase
-      .from('ces_student_assessments')
-      .select('id, score, submitted_at')
-      .eq('student_id', student.id)
-      .eq('quiz_id', quiz.id)
-      .maybeSingle();
+    // 6 + 7. Check for a duplicate submission and fetch the questions at the same time
+    const [existingResult, questionsResult] = await Promise.all([
+      supabase
+        .from('ces_student_assessments')
+        .select('id, score, submitted_at')
+        .eq('student_id', student.id)
+        .eq('quiz_id', quiz.id)
+        .maybeSingle(),
+      supabase
+        .from('ces_quiz_questions')
+        .select('id, question_text, options, marks, sort_order')
+        .eq('quiz_id', quiz.id)
+        .order('sort_order', { ascending: true }),
+    ]);
+    const existingSubmission = existingResult.data;
 
     if (existingSubmission) {
       return {
@@ -249,12 +268,8 @@ export async function verifyAssessmentAccessAction(
       };
     }
 
-    // 7. Fetch questions and strip answer keys
-    const { data: questions, error: questErr } = await supabase
-      .from('ces_quiz_questions')
-      .select('id, question_text, options, marks, sort_order')
-      .eq('quiz_id', quiz.id)
-      .order('sort_order', { ascending: true });
+    // Strip answer keys (never selected above) and shape the questions for the browser
+    const { data: questions, error: questErr } = questionsResult;
 
     if (questErr || !questions || questions.length === 0) {
       return {
@@ -313,28 +328,34 @@ export async function submitAssessmentAction(
     const { matricNo, quizId, answers, sessionPin } = parseResult.data;
     const supabase = createAdminClient();
 
-    if (!(await withinRateLimit(supabase, `submit:ip:${await getClientIp()}`, 60, 600))) {
+    // Independent lookups run together (database round trips dominate latency)
+    const [rateOk, studentResult, quizResult] = await Promise.all([
+      withinRateLimit(supabase, `submit:ip:${await getClientIp()}`, 300, 600),
+      supabase
+        .from('ces_students')
+        .select('id, surname, first_name, matric_no, semester_id')
+        .eq('matric_no', matricNo)
+        .eq('is_deleted', false)
+        .maybeSingle(),
+      supabase
+        .from('ces_quizzes')
+        .select('id, title, max_score, is_open, session_pin, semester_id')
+        .eq('id', quizId)
+        .maybeSingle(),
+    ]);
+    if (!rateOk) {
       return { success: false, error: TOO_MANY_ATTEMPTS };
     }
 
     // 1. Validate student
-    const { data: student, error: stuErr } = await supabase
-      .from('ces_students')
-      .select('id, surname, first_name, matric_no, semester_id')
-      .eq('matric_no', matricNo)
-      .eq('is_deleted', false)
-      .maybeSingle();
+    const { data: student, error: stuErr } = studentResult;
 
     if (stuErr || !student) {
       return { success: false, error: 'Student record could not be verified.' };
     }
 
     // 2. Validate quiz
-    const { data: quiz, error: qzErr } = await supabase
-      .from('ces_quizzes')
-      .select('id, title, max_score, is_open, session_pin, semester_id')
-      .eq('id', quizId)
-      .maybeSingle();
+    const { data: quiz, error: qzErr } = quizResult;
 
     if (qzErr || !quiz) {
       return { success: false, error: 'Target assessment not found.' };
@@ -354,23 +375,23 @@ export async function submitAssessmentAction(
       return { success: false, error: 'Valid active Session PIN is required to submit this assessment.' };
     }
 
-    // 3. Double-check duplicate constraint before grading
-    const { data: priorSub } = await supabase
-      .from('ces_student_assessments')
-      .select('id')
-      .eq('student_id', student.id)
-      .eq('quiz_id', quiz.id)
-      .maybeSingle();
+    // 3 + 4. Double-check for a duplicate and load the answer keys (server-side only) together
+    const [priorResult, questionsResult] = await Promise.all([
+      supabase
+        .from('ces_student_assessments')
+        .select('id')
+        .eq('student_id', student.id)
+        .eq('quiz_id', quiz.id)
+        .maybeSingle(),
+      supabase.from('ces_quiz_questions').select('id, correct_option_index, marks').eq('quiz_id', quiz.id),
+    ]);
+    const priorSub = priorResult.data;
 
     if (priorSub) {
       return { success: false, error: 'Duplicate submission rejected. Assessment was already recorded.' };
     }
 
-    // 4. Fetch questions with answer keys from database
-    const { data: questions, error: qErr } = await supabase
-      .from('ces_quiz_questions')
-      .select('id, correct_option_index, marks')
-      .eq('quiz_id', quiz.id);
+    const { data: questions, error: qErr } = questionsResult;
 
     if (qErr || !questions || questions.length === 0) {
       return { success: false, error: 'Failed to retrieve assessment questions for grading.' };
