@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { failWith } from '@/lib/errors';
+import { AUDIT_FAILED_MESSAGE, writeAuditLog } from '@/lib/audit';
 import { requireStaffUser } from '@/lib/auth/guard';
 import {
   scoreOverrideSchema,
@@ -344,10 +345,12 @@ export async function overrideStudentScoreAction(
     // Check if score already exists
     const { data: existing } = await supabase
       .from('ces_student_assessments')
-      .select('id')
+      .select('id, score')
       .eq('student_id', studentId)
       .eq('quiz_id', quizId)
       .maybeSingle();
+
+    let targetId: string | null = existing?.id ?? null;
 
     if (existing) {
       // Update with override flag, staff ID, and reason
@@ -367,20 +370,35 @@ export async function overrideStudentScoreAction(
       }
     } else {
       // Insert manual offline score
-      const { error: insErr } = await supabase
+      const { data: inserted, error: insErr } = await supabase
         .from('ces_student_assessments')
         .insert({
           student_id: studentId,
           quiz_id: quizId,
           score: newScore,
           is_manual_override: true,
+          overridden_by: staff.id,
           override_reason: reason,
-        });
+        })
+        .select('id')
+        .single();
 
       if (insErr) {
         return failWith('gradebook', insErr, 'Failed to record override score. Please try again.');
       }
+      targetId = inserted?.id ?? null;
     }
+
+    const logged = await writeAuditLog(supabase, staff, {
+      action: 'score_override',
+      studentId,
+      targetTable: 'ces_student_assessments',
+      targetId,
+      oldValue: existing ? { score: Number(existing.score), quiz_id: quizId } : null,
+      newValue: { score: newScore, quiz_id: quizId },
+      reason,
+    });
+    if (!logged) return { success: false, error: AUDIT_FAILED_MESSAGE };
 
     return { success: true };
   } catch (err: unknown) {
@@ -396,7 +414,7 @@ export async function overrideStudentAttendanceAction(
   input: AttendanceOverrideInput
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await requireStaffUser();
+    const staff = await requireStaffUser();
     const parseResult = attendanceOverrideSchema.safeParse(input);
     if (!parseResult.success) {
       const firstErr = parseResult.error.errors[0]?.message || 'Invalid attendance parameters';
@@ -419,7 +437,7 @@ export async function overrideStudentAttendanceAction(
 
     const { data: existing } = await supabase
       .from('ces_attendance_records')
-      .select('id')
+      .select('id, status')
       .eq('student_id', studentId)
       .eq('semester_id', semesterId)
       .eq('course_name', courseName)
@@ -448,6 +466,17 @@ export async function overrideStudentAttendanceAction(
 
       if (error) return failWith('gradebook', error, 'Something went wrong. Please try again.');
     }
+
+    const logged = await writeAuditLog(supabase, staff, {
+      action: 'attendance_override',
+      studentId,
+      targetTable: 'ces_attendance_records',
+      targetId: existing?.id ?? null,
+      oldValue: existing ? { status: existing.status, course_name: courseName } : null,
+      newValue: { status, course_name: courseName },
+      reason: 'Gradebook status toggle',
+    });
+    if (!logged) return { success: false, error: AUDIT_FAILED_MESSAGE };
 
     return { success: true };
   } catch (err: unknown) {

@@ -54,6 +54,7 @@ const TABLES = [
   'ces_matric_counters',
   'ces_class_codes',
   'ces_rate_limits',
+  'ces_audit_log',
 ];
 
 // 1. Anonymous reads must return nothing (empty result or permission error).
