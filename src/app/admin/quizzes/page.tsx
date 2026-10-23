@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   GraduationCap,
@@ -37,7 +37,7 @@ export default function TeacherQuizzesPage() {
   const [editPins, setEditPins] = useState<Record<string, string>>({});
   const [editOpen, setEditOpen] = useState<Record<string, boolean>>({});
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     const res = await getTeacherQuizzesAction(selectedCohort);
     if (res.success && res.quizzes) {
@@ -52,11 +52,11 @@ export default function TeacherQuizzesPage() {
       setEditOpen(openStates);
     }
     setLoading(false);
-  };
+  }, [selectedCohort]);
 
   useEffect(() => {
     loadData();
-  }, [selectedCohort]);
+  }, [loadData]);
 
   const handleToggleOpen = (quizId: string) => {
     setEditOpen((prev) => ({ ...prev, [quizId]: !prev[quizId] }));

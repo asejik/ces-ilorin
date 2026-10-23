@@ -6,7 +6,6 @@ import {
   issueCertificateAction,
   batchIssueCertificatesAction,
 } from '@/actions/broadsheet';
-import { exportBroadsheetToExcel } from '@/lib/excel';
 import type { StudentBroadsheetRow, BroadsheetKPIs, CertificateDetails } from '@/types/broadsheet';
 import type { CohortFilter, StatusFilter } from './types';
 
@@ -47,7 +46,7 @@ export function useBroadsheet() {
       setLoadError(null);
       setRows(res.rows);
       setKpis(res.kpis ?? null);
-      setSemesterName(res.semester?.name ?? `${selectedCohort} — 2026`);
+      setSemesterName(res.semester?.name ?? `${selectedCohort} — ${new Date().getFullYear()}`);
     }
     setLoading(false);
   }, [selectedCohort]);
@@ -103,11 +102,13 @@ export function useBroadsheet() {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (rows.length === 0) {
       showToast('No student data available to export.');
       return;
     }
+    // Load the Excel library only when it is needed (keeps the broadsheet page light).
+    const { exportBroadsheetToExcel } = await import('@/lib/excel');
     exportBroadsheetToExcel({
       cohortName: selectedCohort,
       semesterName,

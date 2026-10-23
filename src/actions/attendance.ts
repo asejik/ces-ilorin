@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { failWith } from '@/lib/errors';
+import { lagosToday } from '@/lib/lagos-time';
+import { fetchAll } from '@/lib/paginate';
 import { requireStaffUser } from '@/lib/auth/guard';
 import {
   ATTENDANCE_COURSE_NAMES,
@@ -59,10 +61,10 @@ export async function submitAttendanceCheckinAction(
 
     const { matricNo, courseName, classCode, sessionDate, deliveryRating, deliveryFeedback } =
       parseResult.data;
-    const finalDate = sessionDate || new Date().toISOString().split('T')[0];
+    const today = lagosToday();
+    const finalDate = sessionDate || today;
 
-    // Prevent future dates
-    const today = new Date().toISOString().split('T')[0];
+    // Prevent future dates (compared in Nigerian time)
     if (finalDate > today) {
       return {
         success: false,
@@ -222,15 +224,30 @@ export async function getAttendanceFeedbackAction(
       };
     });
 
-    // Compute ratings summary
+    // The feedback list shows only the latest 100 comments, but the totals and the average
+    // must cover EVERY check-in, so read all ratings (paged: 1,000-row response cap).
+    const { data: allRatings, error: ratingsErr } = await fetchAll((from, to) => {
+      let q = supabase
+        .from('ces_attendance_records')
+        .select('delivery_rating')
+        .order('id', { ascending: true })
+        .range(from, to);
+      if (courseName && courseName !== 'all') q = q.eq('course_name', courseName);
+      return q;
+    });
+    if (ratingsErr) {
+      return failWith('attendance', ratingsErr, 'Something went wrong. Please try again.');
+    }
+
     const ratingCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     let totalRatingsSum = 0;
     let validRatingsCount = 0;
 
-    for (const f of feedbacks) {
-      if (f.deliveryRating && f.deliveryRating >= 1 && f.deliveryRating <= 5) {
-        ratingCounts[f.deliveryRating] = (ratingCounts[f.deliveryRating] || 0) + 1;
-        totalRatingsSum += f.deliveryRating;
+    for (const r of allRatings) {
+      const rating = r.delivery_rating;
+      if (rating && rating >= 1 && rating <= 5) {
+        ratingCounts[rating] = (ratingCounts[rating] || 0) + 1;
+        totalRatingsSum += rating;
         validRatingsCount++;
       }
     }
@@ -240,7 +257,7 @@ export async function getAttendanceFeedbackAction(
     return {
       success: true,
       stats: {
-        totalCheckins: feedbacks.length,
+        totalCheckins: allRatings.length,
         averageRating,
         ratingCounts,
         feedbacks,

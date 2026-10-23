@@ -42,7 +42,7 @@ export default function HomePage() {
       <section className="py-12 sm:py-20 px-4 sm:px-6 max-w-4xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-solar-50 text-solar-700 border border-solar-200 mb-6 shadow-xs">
           <Sparkles className="w-3.5 h-3.5 text-solar-500" />
-          Discipleship Training Platform · 2026 Academic Year
+          Discipleship Training Platform · {new Date().getFullYear()} Academic Year
         </div>
 
         <h1 className="font-heading font-bold text-3xl sm:text-5xl text-ink-950 tracking-tight leading-tight sm:leading-tight mb-4">

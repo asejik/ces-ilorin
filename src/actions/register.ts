@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { failWith } from '@/lib/errors';
+import { lagosDateParts } from '@/lib/lagos-time';
 import { cookies } from 'next/headers';
 import { RECEIPT_COOKIE, RECEIPT_MAX_AGE_SECONDS } from '@/lib/registration-receipt';
 import {
@@ -79,8 +80,8 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
     }
 
     // 3. Resolve or Create Active Semester for this Cohort Type
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1; // 1-12
+    // Nigerian calendar date (the server runs in UTC) so the matric month is right at month boundaries
+    const { year: currentYear, month: currentMonth } = lagosDateParts();
 
     let semesterId: string;
     const { data: existingSemester, error: semFetchErr } = await supabase

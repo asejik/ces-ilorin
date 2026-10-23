@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { failWith } from '@/lib/errors';
+import { lagosDateParts } from '@/lib/lagos-time';
+import { chunk, fetchAll } from '@/lib/paginate';
 import { ADMIN_ROLES, requireStaffUser } from '@/lib/auth/guard';
 import { signPassportPaths } from '@/lib/passport-photos';
 import {
@@ -54,12 +56,15 @@ export async function getBroadsheetAction(
     }
 
     // 2. Fetch all enrolled students
-    const { data: students, error: stuErr } = await supabase
-      .from('ces_students')
-      .select('id, matric_no, surname, first_name, passport_url, cohort_type, status')
-      .eq('semester_id', semester.id)
-      .eq('is_deleted', false)
-      .order('matric_no', { ascending: true });
+    const { data: students, error: stuErr } = await fetchAll((from, to) =>
+      supabase
+        .from('ces_students')
+        .select('id, matric_no, surname, first_name, passport_url, cohort_type, status')
+        .eq('semester_id', semester.id)
+        .eq('is_deleted', false)
+        .order('matric_no', { ascending: true })
+        .range(from, to)
+    );
 
     if (stuErr) {
       return failWith('broadsheet', stuErr, 'Failed to fetch students. Please try again.');
@@ -91,21 +96,33 @@ export async function getBroadsheetAction(
     }> = [];
 
     if (quizIds.length > 0) {
-      const { data: assessments, error: assErr } = await supabase
-        .from('ces_student_assessments')
-        .select('student_id, quiz_id, score, is_manual_override, override_reason')
-        .in('quiz_id', quizIds);
+      const { data: assessments, error: assErr } = await fetchAll((from, to) =>
+        supabase
+          .from('ces_student_assessments')
+          .select('student_id, quiz_id, score, is_manual_override, override_reason')
+          .in('quiz_id', quizIds)
+          .order('id', { ascending: true })
+          .range(from, to)
+      );
 
-      if (!assErr && assessments) {
-        assessmentsData = assessments;
+      if (assErr) {
+        return failWith('broadsheet', assErr, 'Failed to fetch scores. Please try again.');
       }
+      assessmentsData = assessments;
     }
 
     // 5. Fetch all attendance records for this semester
-    const { data: attendanceRecords } = await supabase
-      .from('ces_attendance_records')
-      .select('student_id, course_name, status')
-      .eq('semester_id', semester.id);
+    const { data: attendanceRecords, error: attErr } = await fetchAll((from, to) =>
+      supabase
+        .from('ces_attendance_records')
+        .select('student_id, course_name, status')
+        .eq('semester_id', semester.id)
+        .order('id', { ascending: true })
+        .range(from, to)
+    );
+    if (attErr) {
+      return failWith('broadsheet', attErr, 'Failed to fetch attendance. Please try again.');
+    }
 
     // 6. Fetch existing certificates for enrolled students
     let certificatesData: Array<{
@@ -117,13 +134,20 @@ export async function getBroadsheetAction(
     }> = [];
 
     if (studentIds.length > 0) {
-      const { data: certs } = await supabase
-        .from('ces_certificates')
-        .select('id, student_id, certificate_no, issued_at, pdf_url')
-        .in('student_id', studentIds);
-
-      if (certs) {
-        certificatesData = certs;
+      // Chunk the id filter (long URLs) and page each chunk (1,000-row response cap).
+      for (const ids of chunk(studentIds, 100)) {
+        const { data: certs, error: certErr } = await fetchAll((from, to) =>
+          supabase
+            .from('ces_certificates')
+            .select('id, student_id, certificate_no, issued_at, pdf_url')
+            .in('student_id', ids)
+            .order('id', { ascending: true })
+            .range(from, to)
+        );
+        if (certErr) {
+          return failWith('broadsheet', certErr, 'Failed to fetch certificates. Please try again.');
+        }
+        certificatesData.push(...certs);
       }
     }
 
@@ -355,7 +379,7 @@ export async function issueCertificateAction(
           studentName: `${student.first_name} ${student.surname}`,
           matricNo: student.matric_no,
           passportUrl: null,
-          cohortName: semester?.name ?? `${student.cohort_type} — 2026`,
+          cohortName: semester?.name ?? `${student.cohort_type} — ${lagosDateParts().year}`,
           cohortType: student.cohort_type,
           cumulativeTotal: Number(existingCert.cumulative_total),
           honourClass: existingCert.honour_class as HonourClass,
@@ -465,7 +489,7 @@ export async function issueCertificateAction(
         studentName: `${student.first_name} ${student.surname}`,
         matricNo: student.matric_no,
         passportUrl: null,
-        cohortName: semester?.name ?? `${student.cohort_type} — 2026`,
+        cohortName: semester?.name ?? `${student.cohort_type} — ${lagosDateParts().year}`,
         cohortType: student.cohort_type,
         cumulativeTotal: Number(newCert.cumulative_total),
         honourClass: newCert.honour_class as HonourClass,
@@ -609,7 +633,7 @@ export async function getCertificateByMatricAction(
         studentName: `${resolvedStudent.first_name} ${resolvedStudent.surname}`,
         matricNo: resolvedStudent.matric_no,
         passportUrl: null,
-        cohortName: semester?.name ?? `${resolvedStudent.cohort_type} — 2026`,
+        cohortName: semester?.name ?? `${resolvedStudent.cohort_type} — ${lagosDateParts().year}`,
         cohortType: resolvedStudent.cohort_type,
         cumulativeTotal: Number(cert.cumulative_total),
         honourClass: cert.honour_class as HonourClass,

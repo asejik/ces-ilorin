@@ -1,3 +1,4 @@
+import { lagosToday } from './lagos-time';
 import * as XLSX from 'xlsx';
 import type { StudentBroadsheetRow, BroadsheetKPIs } from '../types/broadsheet';
 
@@ -141,7 +142,7 @@ export function buildBroadsheetWorkbook({
   ];
 
   const safeCohort = cohortName.replace(/[^a-zA-Z0-9_-]/g, '_');
-  const dateStamp = new Date().toISOString().split('T')[0];
+  const dateStamp = lagosToday();
   const filename = `CES_Broadsheet_${safeCohort}_${dateStamp}.xlsx`;
 
   XLSX.utils.book_append_sheet(wb, ws, 'Broadsheet');

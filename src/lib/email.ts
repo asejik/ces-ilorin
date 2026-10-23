@@ -30,6 +30,10 @@ function getEmailTransporter() {
       user,
       pass,
     },
+    // Never let a slow mail server hang registration.
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
   });
 }
 

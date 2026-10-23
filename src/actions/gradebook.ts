@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/admin';
 import { failWith } from '@/lib/errors';
+import { lagosToday } from '@/lib/lagos-time';
+import { fetchAll } from '@/lib/paginate';
 import { AUDIT_FAILED_MESSAGE, writeAuditLog } from '@/lib/audit';
 import { requireStaffUser } from '@/lib/auth/guard';
 import {
@@ -98,12 +100,15 @@ export async function getCohortGradebookAction(
     }
 
     // 2. Fetch all enrolled students
-    const { data: students, error: stuErr } = await supabase
-      .from('ces_students')
-      .select('id, matric_no, surname, first_name, cohort_type, status')
-      .eq('semester_id', semester.id)
-      .eq('is_deleted', false)
-      .order('matric_no', { ascending: true });
+    const { data: students, error: stuErr } = await fetchAll((from, to) =>
+      supabase
+        .from('ces_students')
+        .select('id, matric_no, surname, first_name, cohort_type, status')
+        .eq('semester_id', semester.id)
+        .eq('is_deleted', false)
+        .order('matric_no', { ascending: true })
+        .range(from, to)
+    );
 
     if (stuErr) {
       return failWith('gradebook', stuErr, 'Failed to fetch students. Please try again.');
@@ -133,21 +138,33 @@ export async function getCohortGradebookAction(
     }> = [];
 
     if (quizIds.length > 0) {
-      const { data: assessments, error: assErr } = await supabase
-        .from('ces_student_assessments')
-        .select('student_id, quiz_id, score, is_manual_override, override_reason')
-        .in('quiz_id', quizIds);
+      const { data: assessments, error: assErr } = await fetchAll((from, to) =>
+        supabase
+          .from('ces_student_assessments')
+          .select('student_id, quiz_id, score, is_manual_override, override_reason')
+          .in('quiz_id', quizIds)
+          .order('id', { ascending: true })
+          .range(from, to)
+      );
 
-      if (!assErr && assessments) {
-        assessmentsData = assessments;
+      if (assErr) {
+        return failWith('gradebook', assErr, 'Failed to fetch scores. Please try again.');
       }
+      assessmentsData = assessments;
     }
 
     // 5. Fetch all attendance records for this semester
-    const { data: attendanceRecords } = await supabase
-      .from('ces_attendance_records')
-      .select('student_id, course_name, status')
-      .eq('semester_id', semester.id);
+    const { data: attendanceRecords, error: attErr } = await fetchAll((from, to) =>
+      supabase
+        .from('ces_attendance_records')
+        .select('student_id, course_name, status')
+        .eq('semester_id', semester.id)
+        .order('id', { ascending: true })
+        .range(from, to)
+    );
+    if (attErr) {
+      return failWith('gradebook', attErr, 'Failed to fetch attendance. Please try again.');
+    }
 
     // Group assessments by student_id -> quiz_id
     const studentAssessmentsMap = new Map<
@@ -448,7 +465,7 @@ export async function overrideStudentAttendanceAction(
         .from('ces_attendance_records')
         .update({
           status,
-          session_date: new Date().toISOString().split('T')[0],
+          session_date: lagosToday(),
         })
         .eq('id', existing.id);
 
@@ -461,7 +478,7 @@ export async function overrideStudentAttendanceAction(
           semester_id: semesterId,
           course_name: courseName,
           status,
-          session_date: new Date().toISOString().split('T')[0],
+          session_date: lagosToday(),
         });
 
       if (error) return failWith('gradebook', error, 'Something went wrong. Please try again.');

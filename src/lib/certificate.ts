@@ -1,3 +1,4 @@
+import { lagosDateParts } from './lagos-time';
 import type { HonourClass } from '@/types/database';
 
 /**
@@ -54,10 +55,10 @@ export function formatCertificateDate(input: Date | string): string {
     return '19th September, 2026';
   }
 
-  const day = date.getDate();
+  // Always the Nigerian calendar date, whatever time zone the server runs in.
+  const { year, day } = lagosDateParts(date);
   const suffix = getOrdinalSuffix(day);
-  const month = date.toLocaleString('en-US', { month: 'long' });
-  const year = date.getFullYear();
+  const month = date.toLocaleString('en-US', { month: 'long', timeZone: 'Africa/Lagos' });
 
   return `${day}${suffix} ${month}, ${year}`;
 }

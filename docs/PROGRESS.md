@@ -101,6 +101,14 @@
 - Not exercised live: issuing a certificate as a teacher (same guard as the broadsheet read, which was rejected). The Export and Batch Issue buttons are still visible to teachers (they do nothing useful: no data, server rejects).
 - P04 status now: Owner tasks remain (disable public sign-ups; fresh exam questions; sermons-app privilege review; Turnstile keys). Code/database P04 work is complete apart from the nonce-based CSP (P04-13).
 
+### 2026-10-27 - P03 Phase 1 (data correctness) - DONE and verified
+- **P03-17**: `src/lib/paginate.ts` (`fetchAll`, `chunk`) now reads students, scores, attendance and certificates page by page in the gradebook and broadsheet, and failures are reported instead of silently ignored. Also fixed the attendance feedback totals and average (they only counted the latest 100 check-ins). **Verified live**: 120 temporary students x 9 = 1,080 scores: a plain select returned 1,000; `fetchAll` returned 1,080; the real gradebook and broadsheet showed all 120 students with all 9 scores each (last student included). Test semester, students and scores deleted; original semesters restored.
+- **P03-11**: `src/lib/lagos-time.ts`; matric year/month, attendance dates ("not in the future" check), gradebook session dates, Excel file date and certificate dates use Nigerian time.
+- **P03-15/14/13**: no hardcoded 2026; Excel library loaded on Export click (broadsheet first load 235 kB to 115 kB); both lint warnings fixed (0 warnings).
+- **P03-07 (part)**: SMTP connection/greeting/socket timeouts so a slow mail server cannot hang registration.
+- Checks: tsc clean, 86 unit tests (+11), lint clean, production build OK.
+- Next: Phase 2 (migration: restrict deletes, consent columns, email status/unique).
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.

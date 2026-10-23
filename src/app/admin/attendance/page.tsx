@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   UserCheck,
@@ -22,18 +22,18 @@ export default function AttendanceFeedbackPage() {
   const [stats, setStats] = useState<AttendanceSummaryStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadFeedback = async () => {
+  const loadFeedback = useCallback(async () => {
     setLoading(true);
     const res = await getAttendanceFeedbackAction(selectedCourse);
     if (res.success && res.stats) {
       setStats(res.stats);
     }
     setLoading(false);
-  };
+  }, [selectedCourse]);
 
   useEffect(() => {
     loadFeedback();
-  }, [selectedCourse]);
+  }, [loadFeedback]);
 
   return (
     <div className="min-h-screen bg-canvas">

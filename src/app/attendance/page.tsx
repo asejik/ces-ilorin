@@ -15,13 +15,14 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { submitAttendanceCheckinAction } from '@/actions/attendance';
+import { lagosToday } from '@/lib/lagos-time';
 import {
   ATTENDANCE_COURSE_NAMES,
   ATTENDANCE_COURSE_GROUPS,
 } from '@/lib/validation/attendance';
 
 export default function StudentAttendancePage() {
-  const todayIso = new Date().toISOString().split('T')[0];
+  const todayIso = lagosToday();
   const [matricNo, setMatricNo] = useState('');
   const [classCode, setClassCode] = useState('');
   const [courseName, setCourseName] = useState<string>(ATTENDANCE_COURSE_NAMES[0]);
