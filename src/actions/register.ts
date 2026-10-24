@@ -96,36 +96,14 @@ export async function registerStudentAction(formData: FormData): Promise<Registe
       console.error('[Registration] Error querying active semester:', semFetchErr);
     }
 
-    if (existingSemester) {
-      semesterId = existingSemester.id;
-    } else {
-      // Auto-create active default semester if none exists
-      const semesterName =
-        validatedData.cohort_type === 'Sunday Cohort'
-          ? `Sunday Cohort — ${currentYear}`
-          : `Regular Cohort — ${currentYear}`;
-
-      const { data: newSemester, error: semErr } = await supabase
-        .from('ces_semesters')
-        .insert({
-          name: semesterName,
-          type: validatedData.cohort_type,
-          year: currentYear,
-          is_active: true,
-          notes: `Auto-initialized for ${validatedData.cohort_type}`,
-        })
-        .select('id')
-        .single();
-
-      if (semErr || !newSemester) {
-        console.error('[Registration] Failed to resolve or initialize active cohort semester:', semErr);
-        return {
-          success: false,
-          error: `Unable to assign an active semester for cohort "${validatedData.cohort_type}". Please contact administration.`,
-        };
-      }
-      semesterId = newSemester.id;
+    // Semesters are opened by an admin (/admin/semesters); registration never invents one.
+    if (!existingSemester) {
+      return {
+        success: false,
+        error: `Registration for the ${validatedData.cohort_type} is not open right now. Please contact the school office.`,
+      };
     }
+    semesterId = existingSemester.id;
 
     // One registration per email address per semester. Checked before a matric number is
     // issued or a photo uploaded, so a repeat attempt wastes neither.

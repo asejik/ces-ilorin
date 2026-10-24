@@ -126,6 +126,13 @@
 - Local checks: tsc clean, lint clean, 86 unit tests, build OK.
 - Next: Phase 4 (semester setup screen, Student 360, Excel upload for certificates, privacy page, health check, backups, launch checklist).
 
+### 2026-10-30 - Phase 4 step 1: semester setup - DONE and verified
+- New admin-only `/admin/semesters` (`src/actions/semesters.ts`, `src/lib/validation/semester.ts`): list with cohort badge, Active/Closed and student count; create a semester; make active (turns off the other active semester of the same cohort first); close (confirmation). Linked from the broadsheet header. No database change.
+- Registration no longer auto-creates a semester: if the cohort has no active one it says registration is not open. Closing the active semester therefore pauses registration, quizzes and check-in for that cohort.
+- Known limits: the database does not enforce "one active semester per cohort" (the action does); semester changes are not written to the audit log (its action list only covers scores and attendance).
+- Verified: tsc and lint clean, 89 unit tests, E2E 18/18 plus new `journey5-semesters` 2/2 (teacher refused; admin creates, switches, closes; registration refused while closed; Regular semester restored and test semester deleted, checked by query).
+- Test-suite bug found and fixed on the way: the new spec's cleanup ran before it had recorded the original active semester and left staging's Regular semester closed; reactivated by hand and the hook now records state first.
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
