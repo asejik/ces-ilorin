@@ -2,9 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { StaffUser } from '@/lib/auth/guard';
 
 export interface AuditEntry {
-  action: 'score_override' | 'attendance_override';
+  action: 'score_override' | 'attendance_override' | 'welcome_email_resent';
   studentId: string;
-  targetTable: 'ces_student_assessments' | 'ces_attendance_records';
+  targetTable: 'ces_student_assessments' | 'ces_attendance_records' | 'ces_students';
   targetId?: string | null;
   oldValue: Record<string, unknown> | null;
   newValue: Record<string, unknown>;

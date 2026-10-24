@@ -42,6 +42,12 @@ export function GradebookHeader({
             <span className="hidden sm:inline">Refresh Roster</span>
           </button>
           <Link
+            href="/admin/students"
+            className="h-9 px-3 rounded-lg bg-surface border border-ink-300 text-ink-800 text-xs font-semibold hover:bg-surface-subtle transition-colors flex items-center gap-1.5 shadow-xs"
+          >
+            <span>Student Lookup</span>
+          </Link>
+          <Link
             href="/admin/broadsheet"
             className="h-9 px-3 rounded-lg bg-solar-50 border border-solar-300 text-solar-900 text-xs font-bold hover:bg-solar-100 transition-colors flex items-center gap-1.5 shadow-xs"
           >

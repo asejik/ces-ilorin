@@ -133,6 +133,13 @@
 - Verified: tsc and lint clean, 89 unit tests, E2E 18/18 plus new `journey5-semesters` 2/2 (teacher refused; admin creates, switches, closes; registration refused while closed; Regular semester restored and test semester deleted, checked by query).
 - Test-suite bug found and fixed on the way: the new spec's cleanup ran before it had recorded the original active semester and left staging's Regular semester closed; reactivated by hand and the hook now records state first.
 
+### 2026-10-31 - Phase 4 step 2: Student 360 lookup - DONE and verified
+- New staff page `/admin/students` (`src/actions/students.ts`): search by matric number or name (administrators also by e-mail), then one student's record: photo (signed link), cohort/semester, consent time and version, welcome-email status, all 9 scores with "set by staff + reason" notes, the two mandatory classes plus other attendance, computed total / graduation status / honour class, certificate, and the change history from the audit log. Linked from the gradebook header. No database change.
+- Roles: teachers and admins can look students up; only administrators see contact details (email, phones, address, emergency contact, notes) and the **Resend welcome email** button. Written class feedback is never shown per student (stays anonymous).
+- Resend: admin-only, max 3 per student per hour, records the new email status on the student, and writes a `welcome_email_resent` row to the audit log (no schema change needed).
+- Search text is cleaned (`src/lib/search-term.ts`) so commas, brackets, quotes and wildcards cannot alter the filter.
+- Verified: tsc and lint clean, 93 unit tests, E2E 23/23 (new `journey6-student-lookup`: admin sees full record and resends, audit row written with the admin's email; teacher sees no contact details/resend and cannot find people by email; odd search text is harmless). Real mail sending is still untested (staging reports "not set up").
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
