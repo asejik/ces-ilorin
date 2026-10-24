@@ -159,6 +159,11 @@
 - **Docs**: `docs/BACKUP.md` (uptime monitor setup, routine, restore outline).
 - **Not done**: a full restore into a scratch project has not been rehearsed; no uptime monitor is set up yet; no production backup run yet (owner decision).
 
+### Phase 4 step 6: launch checklist (2026-11-04)
+- **What**: `docs/LAUNCH-CHECKLIST.md`: nine sections (production database, backups, content, email, hosting, abuse protection, privacy, final live checks, launch week) with owner or Claude marked, plus accepted known limits.
+- **Phase 4 complete**: semesters, student lookup, Excel import and certificates, privacy and data requests, health check and backup, launch checklist.
+- **Open owner items**: every box in the checklist is unticked; production attendance index, real email, Turnstile, deployed load test and restore rehearsal are the main ones.
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
