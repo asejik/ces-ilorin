@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_ces_attendance_student_course_semester;

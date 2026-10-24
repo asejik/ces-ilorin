@@ -78,6 +78,13 @@ export function BroadsheetHeader({
           </button>
 
           <Link
+            href="/admin/import"
+            className="h-9 px-3 rounded-lg bg-surface border border-ink-300 text-ink-800 text-xs font-semibold hover:bg-surface-subtle transition-colors flex items-center gap-1.5 shadow-xs"
+          >
+            <span>Import Results</span>
+          </Link>
+
+          <Link
             href="/admin/semesters"
             className="h-9 px-3 rounded-lg bg-surface border border-ink-300 text-ink-800 text-xs font-semibold hover:bg-surface-subtle transition-colors flex items-center gap-1.5 shadow-xs"
           >

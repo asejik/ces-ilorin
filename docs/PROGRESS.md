@@ -140,6 +140,13 @@
 - Search text is cleaned (`src/lib/search-term.ts`) so commas, brackets, quotes and wildcards cannot alter the filter.
 - Verified: tsc and lint clean, 93 unit tests, E2E 23/23 (new `journey6-student-lookup`: admin sees full record and resends, audit row written with the admin's email; teacher sees no contact details/resend and cannot find people by email; odd search text is harmless). Real mail sending is still untested (staging reports "not set up").
 
+### Phase 4 step 3: Excel results import and certificates (2026-11-01)
+- **What**: admin-only page `/admin/import`. Download a blank template (same headings as the broadsheet export), upload a `.xlsx`, review a preview (rows ready, rows with problems, exactly what will change), confirm, then press **Generate certificates** (uses the existing graduation rules; students with no certificate yet).
+- **Rules**: .xlsx only, 2 MB, 1,000 rows, checked on the server. A broadsheet export can be re-imported (title lines and computed columns are ignored). Blank, `-` and `Not Recorded` cells keep the saved value. Problem rows are skipped and listed: unknown matric, other semester, non-number, below 0, above the maximum (5 / 60), bad attendance word, missing matric, duplicated matric (every copy). Unchanged values are not rewritten.
+- **Saved as**: manual entries with reason `Excel import: <file> (<date>)`, one audit-log row per changed score/attendance, 20 imports per hour per admin. The browser's preview is never trusted: the file is re-checked on save.
+- **Tests**: 9 new unit tests (102 total pass); E2E journey 7 (teacher refused, fake file refused, preview flags 4 bad rows, save, audit rows, same file again changes nothing, certificate = Distinction 94) all pass. Full staging suite 27/27. Staging semesters and certificates left as found.
+- **Found while testing**: staging has no unique index on attendance `(student_id, course_name, semester_id)` although the first migrations create it, so the "no double check-in" rule was app-only there. The import therefore updates rows by id. A probe of mine inserted one duplicate row on staging; it was deleted. Migration `20261028_p04_attendance_unique_index.sql` (check for duplicates, create index, rollback file) is written but NOT yet run on staging or production.
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
