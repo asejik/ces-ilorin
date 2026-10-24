@@ -31,5 +31,8 @@ test.describe('Security regression checks (no login needed)', () => {
   test('health check answers', async ({ request }) => {
     const res = await request.get('/api/health');
     expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    expect(body.status).toBe('ok');
+    expect(body.database).toBe('ok');
   });
 });

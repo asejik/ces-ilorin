@@ -153,6 +153,12 @@
 - **Tests**: tsc and lint clean, 2 new E2E tests pass. Attendance unique index confirmed present on staging after the owner ran the migration; full staging suite 27/27 beforehand.
 - **Not done**: owner must set the contact email in Vercel; production still needs the attendance index migration; export/anonymise are manual (documented).
 
+### Phase 4 step 5: health check and backup script (2026-11-03)
+- **Health**: `/api/health` now reads one row from the database. 200 ok when reachable; 503 degraded when not (checked with a deliberately wrong key: 503). Details only in the server log. The browser test now checks the database field.
+- **Backup**: `npm run db:backup -- [--env file] [--with-files]` writes all 11 CES tables (plus passport photos and manual) to git-ignored `private/backups/` with row counts and SHA-256 hashes; refuses to call a partial copy complete; `--verify <folder>` re-checks it (tested: a one-byte change is caught). Staging backup taken: 11 tables, 16 files, verified OK.
+- **Docs**: `docs/BACKUP.md` (uptime monitor setup, routine, restore outline).
+- **Not done**: a full restore into a scratch project has not been rehearsed; no uptime monitor is set up yet; no production backup run yet (owner decision).
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.
