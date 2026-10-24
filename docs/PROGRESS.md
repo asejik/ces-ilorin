@@ -147,6 +147,12 @@
 - **Tests**: 9 new unit tests (102 total pass); E2E journey 7 (teacher refused, fake file refused, preview flags 4 bad rows, save, audit rows, same file again changes nothing, certificate = Distinction 94) all pass. Full staging suite 27/27. Staging semesters and certificates left as found.
 - **Found while testing**: staging has no unique index on attendance `(student_id, course_name, semester_id)` although the first migrations create it, so the "no double check-in" rule was app-only there. The import therefore updates rows by id. A probe of mine inserted one duplicate row on staging; it was deleted. Migration `20261028_p04_attendance_unique_index.sql` (check for duplicates, create index, rollback file) is written but NOT yet run on staging or production.
 
+### Phase 4 step 4: privacy notice and data requests (2026-11-02)
+- **What**: public page `/privacy` (what we collect, why, who sees it, 5-year retention, rights, how to ask, protection). The registration consent now links to it. Added to the sitemap. Contact address comes from `NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL` (empty = 'contact the school office').
+- **Process**: `docs/DATA-REQUESTS.md` (log, verify identity, access, correct, delete, 30-day reply, yearly retention review). Values in `src/lib/privacy.ts`.
+- **Tests**: tsc and lint clean, 2 new E2E tests pass. Attendance unique index confirmed present on staging after the owner ran the migration; full staging suite 27/27 beforehand.
+- **Not done**: owner must set the contact email in Vercel; production still needs the attendance index migration; export/anonymise are manual (documented).
+
 ### Known issues found during remediation (to be covered by the re-run audits)
 - `ces-assets` bucket is public and holds passport photos at guessable paths.
 - RLS exposes `session_pin` to anonymous reads of open quizzes; `anon` has GRANT ALL and permissive insert policies on students/attendance.

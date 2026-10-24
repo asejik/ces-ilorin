@@ -20,7 +20,11 @@ export function ConsentSection({
           className="w-4 h-4 mt-0.5 rounded border-ink-300 text-solar-600 focus:ring-solar-500 shrink-0 cursor-pointer"
         />
         <span className="text-xs text-ink-700 leading-relaxed">
-          <strong className="text-ink-950 font-semibold">Data Privacy & Consent (NDPA 2023):</strong> I consent to Citizens of Light Church / Citizens Elementary School collecting, storing, and processing my personal, contact, and academic information strictly for cohort enrollment, discipleship progress, and graduation certification in accordance with the Nigeria Data Protection Act (NDPA 2023).
+          <strong className="text-ink-950 font-semibold">Data Privacy & Consent (NDPA 2023):</strong> I consent to Citizens of Light Church / Citizens Elementary School collecting, storing, and processing my personal, contact, and academic information strictly for cohort enrollment, discipleship progress, and graduation certification in accordance with the Nigeria Data Protection Act (NDPA 2023). Read the{' '}
+          <a href="/privacy" target="_blank" rel="noopener" className="font-semibold text-ink-950 underline">
+            Privacy Notice
+          </a>
+          .
         </span>
       </label>
     </div>
